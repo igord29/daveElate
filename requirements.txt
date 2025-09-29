@@ -1,0 +1,13 @@
+# LiveKit Agent with Anam.ai Integration
+livekit-agents[anam]~=1.2
+livekit-plugins-anam
+python-dotenv
+
+# Enhanced features for moving consultation
+openai>=1.0.0
+pillow>=9.0.0
+pydantic>=2.0.0
+reportlab>=4.0.0
+
+# Optional: For advanced TTS (if not using Anam.ai TTS)
+# elevenlabs>=0.2.0

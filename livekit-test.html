@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>LiveKit Test Join</title>
+    <script src="https://unpkg.com/livekit-client/dist/livekit-client.umd.js"></script>
+  </head>
+  <body>
+    <h2>LiveKit Test Join</h2>
+    <button id="joinBtn" onclick="joinRoom()">Join Room</button>
+    <button id="leaveBtn" onclick="leaveRoom()" style="display:none;">Leave Room</button>
+    <div id="status">Click "Join Room" to start</div>
+    <video id="localVideo" autoplay playsinline muted style="width: 300px; height: 200px; border: 1px solid #ccc;"></video>
+    <video id="remoteVideo" autoplay playsinline style="width: 300px; height: 200px; border: 1px solid #ccc;"></video>
+    <script>
+      const url = "wss://elatemoving1-au2xcq3l.livekit.cloud"; // your project URL
+      const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTkxMDQ2ODksImlkZW50aXR5IjoibWVldGluZy11c2VyIiwiaXNzIjoiQVBJNjJEQVA4WXFRRHd0IiwibmFtZSI6Ik1lZXRpbmcgVXNlciIsIm5iZiI6MTc1OTA5NzQ4OSwic3ViIjoibWVldGluZy11c2VyIiwidmlkZW8iOnsicm9vbSI6IkVsYXRlLXJvb20iLCJyb29tSm9pbiI6dHJ1ZX19.T5MTNO8nvlMeSD6NXiXQivHgbBL6izkw4MWWUnCKZN4"; // your JWT
+      
+      let room = null;
+
+      async function joinRoom() {
+        try {
+          document.getElementById('status').textContent = 'Connecting...';
+          document.getElementById('joinBtn').style.display = 'none';
+          
+          room = new LivekitClient.Room();
+          
+          // Add event listeners
+          room.on('participantConnected', p => {
+            console.log('Participant connected:', p.identity);
+            document.getElementById('status').textContent = `Participant connected: ${p.identity}`;
+          });
+          
+          room.on('participantDisconnected', p => {
+            console.log('Participant disconnected:', p.identity);
+            document.getElementById('status').textContent = `Participant disconnected: ${p.identity}`;
+          });
+          
+          room.on('trackSubscribed', (track, pub, participant) => {
+            console.log('Track subscribed:', track.kind, participant.identity);
+            if (track.kind === 'video') {
+              document.getElementById('remoteVideo').srcObject = new MediaStream([track.mediaStreamTrack]);
+            }
+          });
+          
+          room.on('trackUnsubscribed', (track, pub, participant) => {
+            console.log('Track unsubscribed:', track.kind, participant.identity);
+          });
+          
+          room.on('connected', () => {
+            console.log('Connected to room');
+            document.getElementById('status').textContent = 'Connected to room';
+            document.getElementById('leaveBtn').style.display = 'inline';
+          });
+          
+          room.on('disconnected', () => {
+            console.log('Disconnected from room');
+            document.getElementById('status').textContent = 'Disconnected from room';
+            document.getElementById('joinBtn').style.display = 'inline';
+            document.getElementById('leaveBtn').style.display = 'none';
+          });
+
+          // Connect to room
+          await room.connect(url, token);
+          
+          // Get user media with user gesture
+          const tracks = await LivekitClient.createLocalTracks({ 
+            audio: true, 
+            video: { 
+              width: 640, 
+              height: 480 
+            } 
+          });
+          
+          // Publish tracks
+          tracks.forEach(track => {
+            room.localParticipant.publishTrack(track);
+          });
+
+          // Set local video
+          const localVideo = document.getElementById('localVideo');
+          localVideo.srcObject = new MediaStream(tracks.map(t => t.mediaStreamTrack));
+          
+          document.getElementById('status').textContent = 'Connected and publishing!';
+          
+        } catch (error) {
+          console.error('Error joining room:', error);
+          document.getElementById('status').textContent = `Error: ${error.message}`;
+          document.getElementById('joinBtn').style.display = 'inline';
+        }
+      }
+
+      async function leaveRoom() {
+        if (room) {
+          await room.disconnect();
+          room = null;
+        }
+      }
+    </script>
+  </body>
+</html>

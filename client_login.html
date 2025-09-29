@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Elate Moving - Client Login</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #333;
+        }
+        
+        .login-container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+        }
+        
+        .logo {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+        
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        .subtitle {
+            color: #7f8c8d;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        input, select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+        
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 14px 30px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-top: 10px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .features {
+            margin-top: 30px;
+            text-align: left;
+        }
+        
+        .features h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .feature-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .feature-icon {
+            font-size: 20px;
+            margin-right: 12px;
+        }
+        
+        .feature-text {
+            color: #495057;
+            font-size: 14px;
+        }
+        
+        .demo-info {
+            background: #e3f2fd;
+            border: 1px solid #bbdefb;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+            text-align: left;
+        }
+        
+        .demo-info h4 {
+            color: #1976d2;
+            margin-bottom: 8px;
+        }
+        
+        .demo-info p {
+            color: #1565c0;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-online {
+            background: #4caf50;
+        }
+        
+        .status-offline {
+            background: #f44336;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        @media (max-width: 480px) {
+            .login-container {
+                padding: 30px 20px;
+            }
+            
+            h1 {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="logo">🏠</div>
+        <h1>Elate Moving</h1>
+        <p class="subtitle">AI-Powered Moving Consultation</p>
+        
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="clientName">Your Name</label>
+                <input type="text" id="clientName" name="clientName" placeholder="Enter your full name" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="consultationType">Consultation Type</label>
+                <select id="consultationType" name="consultationType" required>
+                    <option value="">Select consultation type</option>
+                    <option value="residential">Residential Move</option>
+                    <option value="commercial">Commercial Move</option>
+                    <option value="storage">Storage Consultation</option>
+                    <option value="demo">Demo Consultation</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="propertySize">Property Size</label>
+                <select id="propertySize" name="propertySize" required>
+                    <option value="">Select property size</option>
+                    <option value="studio">Studio (1 room)</option>
+                    <option value="1br">1 Bedroom</option>
+                    <option value="2br">2 Bedrooms</option>
+                    <option value="3br">3 Bedrooms</option>
+                    <option value="4br">4+ Bedrooms</option>
+                    <option value="commercial">Commercial Space</option>
+                </select>
+            </div>
+            
+            <button type="submit" class="btn" id="joinBtn">
+                <span id="btnText">Start Consultation with Dave</span>
+                <span id="btnLoading" class="loading" style="display: none;"></span>
+            </button>
+        </form>
+        
+        <div class="features">
+            <h3>What to Expect</h3>
+            <div class="feature-item">
+                <span class="feature-icon">🤖</span>
+                <span class="feature-text">Meet Dave, your AI moving consultant</span>
+            </div>
+            <div class="feature-item">
+                <span class="feature-icon">📹</span>
+                <span class="feature-text">Show Dave your rooms via video</span>
+            </div>
+            <div class="feature-item">
+                <span class="feature-icon">📋</span>
+                <span class="feature-text">Get instant inventory analysis</span>
+            </div>
+            <div class="feature-item">
+                <span class="feature-icon">📄</span>
+                <span class="feature-text">Receive detailed moving report</span>
+            </div>
+        </div>
+        
+        <div class="demo-info">
+            <h4>🎯 Demo Mode</h4>
+            <p>This is a demonstration of our AI-powered moving consultation system. Dave will analyze your space and provide professional moving advice.</p>
+        </div>
+    </div>
+
+    <script>
+        // Form submission
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const clientName = document.getElementById('clientName').value;
+            const consultationType = document.getElementById('consultationType').value;
+            const propertySize = document.getElementById('propertySize').value;
+            
+            if (!clientName || !consultationType || !propertySize) {
+                alert('Please fill in all fields');
+                return;
+            }
+            
+            // Show loading state
+            const btn = document.getElementById('joinBtn');
+            const btnText = document.getElementById('btnText');
+            const btnLoading = document.getElementById('btnLoading');
+            
+            btn.disabled = true;
+            btnText.style.display = 'none';
+            btnLoading.style.display = 'inline-block';
+            
+            try {
+                // Simulate connection process
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                
+                // Store client info in sessionStorage
+                sessionStorage.setItem('clientName', clientName);
+                sessionStorage.setItem('consultationType', consultationType);
+                sessionStorage.setItem('propertySize', propertySize);
+                sessionStorage.setItem('consultationStartTime', new Date().toISOString());
+                
+                // Redirect to meeting interface
+                window.location.href = 'meeting_interface.html';
+                
+            } catch (error) {
+                console.error('Error starting consultation:', error);
+                alert('Error starting consultation. Please try again.');
+                
+                // Reset button state
+                btn.disabled = false;
+                btnText.style.display = 'inline';
+                btnLoading.style.display = 'none';
+            }
+        });
+        
+        // Auto-fill demo data for quick testing
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check if this is a demo request
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('demo') === 'true') {
+                document.getElementById('clientName').value = 'Demo Client';
+                document.getElementById('consultationType').value = 'demo';
+                document.getElementById('propertySize').value = '2br';
+            }
+        });
+    </script>
+</body>
+</html>

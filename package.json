@@ -1,0 +1,29 @@
+{
+  "name": "dave-moving-consultant",
+  "version": "1.0.0",
+  "description": "Dave - Professional Moving Consultant with Anam.ai Integration",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "build": "echo 'No build step required'",
+    "deploy": "vercel --prod"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "node-fetch": "^3.3.2"
+  },
+  "keywords": [
+    "anam",
+    "ai",
+    "avatar",
+    "moving",
+    "consultant"
+  ],
+  "author": "Elate Moving",
+  "license": "MIT"
+}

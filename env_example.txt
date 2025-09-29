@@ -1,0 +1,13 @@
+# LiveKit Configuration
+LIVEKIT_URL=wss://elatemoving1-au2xcq3l.livekit.cloud
+LIVEKIT_API_KEY=your_livekit_api_key
+LIVEKIT_API_SECRET=your_livekit_api_secret
+
+# Anam.ai Configuration
+ANAM_API_KEY=your_anam_api_key_here
+ANAM_AVATAR_ID=demo-avatar-001
+ANAM_AVATAR_NAME=AI Assistant
+
+# Agent Configuration
+AGENT_NAME=AnamAvatarAgent
+ROOM_NAME=Elate-room
