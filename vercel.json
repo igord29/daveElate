@@ -9,8 +9,7 @@
   "routes": [
     { "src": "^/api/test", "dest": "/api/test.js" },
     { "src": "^/api/debug-files", "dest": "/api/debug-files.js" },
-    { "src": "^/api/(.*)", "dest": "/api/server-step1.js" },
-    { "src": "/(.*)", "dest": "/api/static.js" }
+    { "src": "^/api/(.*)", "dest": "/api/server-step1.js" }
   ],
   "env": {
     "AVATAR_API_KEY": "YjUxM2ExNjItOTBhYy00ZDZkLWFhNzgtZDYwNzMxN2ViZjZkOnhqMU9Mekg1Zm1qb1BONkJESkdmNk8zMithem9WaWh6WmVjK2ZDSnlDelk9",
