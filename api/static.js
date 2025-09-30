@@ -9,7 +9,7 @@ module.exports = (req, res) => {
     
     // Handle root path
     if (url === '/') {
-      const filePath = path.join(__dirname, '..', 'index.html');
+      const filePath = path.join(process.cwd(), 'index.html');
       console.log('DEBUG: Root path, checking:', filePath);
       if (fs.existsSync(filePath)) {
         console.log('DEBUG: index.html found');
@@ -24,9 +24,9 @@ module.exports = (req, res) => {
     
     // Handle HTML files
     if (url.endsWith('.html')) {
-      const filePath = path.join(__dirname, '..', url);
+      const filePath = path.join(process.cwd(), url);
       console.log('DEBUG: HTML file request, checking:', filePath);
-      console.log('DEBUG: __dirname:', __dirname);
+      console.log('DEBUG: process.cwd():', process.cwd());
       console.log('DEBUG: Resolved path:', filePath);
       console.log('DEBUG: File exists:', fs.existsSync(filePath));
       
@@ -38,19 +38,18 @@ module.exports = (req, res) => {
         return;
       } else {
         console.log('DEBUG: HTML file NOT found');
-        // List files in parent directory for debugging
+        // List files in current working directory for debugging
         try {
-          const parentDir = path.join(__dirname, '..');
-          const files = fs.readdirSync(parentDir);
-          console.log('DEBUG: Files in parent directory:', files);
+          const files = fs.readdirSync(process.cwd());
+          console.log('DEBUG: Files in cwd:', files);
         } catch (e) {
-          console.log('DEBUG: Error listing parent directory:', e.message);
+          console.log('DEBUG: Error listing cwd:', e.message);
         }
       }
     }
     
     // Handle other static files
-    const filePath = path.join(__dirname, '..', url);
+    const filePath = path.join(process.cwd(), url);
     console.log('DEBUG: Other static file, checking:', filePath);
     if (fs.existsSync(filePath)) {
       console.log('DEBUG: Other static file found');
@@ -84,7 +83,8 @@ module.exports = (req, res) => {
       message: 'Static file not found',
       debug: {
         __dirname: __dirname,
-        resolvedPath: path.join(__dirname, '..', url)
+        processCwd: process.cwd(),
+        resolvedPath: path.join(process.cwd(), url)
       }
     });
     
