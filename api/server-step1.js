@@ -52,14 +52,13 @@ app.post("/api/session-token", async (req, res) => {
   }
 });
 
-// Default route
+// Only handle API routes - static files handled by Vercel
 app.get("*", (req, res) => {
-  res.json({ 
-    message: "Dave's AI Moving Consultant API - Step 1",
-    status: "working",
+  res.status(404).json({ 
+    error: "API endpoint not found",
+    message: "This is an API server. Static files are served separately.",
     method: req.method,
-    url: req.url,
-    timestamp: new Date().toISOString()
+    url: req.url
   });
 });
 
