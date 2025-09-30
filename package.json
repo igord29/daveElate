@@ -4,10 +4,8 @@
   "description": "Dave - Professional Moving Consultant with Anam.ai Integration",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node server.js",
-    "build": "echo 'No build step required'",
-    "deploy": "vercel --prod"
+    "build": "echo Building API for Vercel...",
+    "dev": "vercel dev"
   },
   "engines": {
     "node": "20.x"
