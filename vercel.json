@@ -2,7 +2,7 @@
   "version": 2,
   "routes": [
     { "src": "^/api/test", "dest": "/api/test.js" },
-    { "src": "^/api/(.*)", "dest": "/api/server.js" },
+    { "src": "^/api/(.*)", "dest": "/api/server-minimal.js" },
     { "src": "^(.*)$", "dest": "/public$1" }
   ],
   "env": {
