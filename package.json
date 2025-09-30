@@ -9,7 +9,7 @@
     "dev": "vercel dev"
   },
   "engines": {
-    "node": "18.x"
+    "node": "22.x"
   },
   "dependencies": {
     "dotenv": "^16.3.1",
