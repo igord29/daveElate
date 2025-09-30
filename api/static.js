@@ -19,6 +19,13 @@ module.exports = (req, res) => {
         return;
       } else {
         console.log('DEBUG: index.html NOT found');
+        // List all files in working directory for debugging
+        try {
+          const files = fs.readdirSync(process.cwd());
+          console.log('DEBUG: Files in working directory:', files);
+        } catch (e) {
+          console.log('DEBUG: Error listing working directory:', e.message);
+        }
       }
     }
     
