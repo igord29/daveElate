@@ -1,8 +1,7 @@
 {
   "version": 2,
   "routes": [
-    { "src": "^/api/test", "dest": "/api/test.js" },
-    { "src": "^/api/(.*)", "dest": "/api/server-step1.js" }
+    { "src": "^/api/test", "dest": "/api/test.js" }
   ],
   "env": {
     "AVATAR_API_KEY": "YjUxM2ExNjItOTBhYy00ZDZkLWFhNzgtZDYwNzMxN2ViZjZkOnhqMU9Mekg1Zm1qb1BONkJESkdmNk8zMithem9WaWh6WmVjK2ZDSnlDelk9",
