@@ -8,9 +8,18 @@ const ItemCaptureSystem = require('../item_capture_system');
 const app = express();
 app.use(express.json());
 
-// Initialize vision analyzer and item capture system
-const visionAnalyzer = new VisionAnalyzer(process.env.OPENAI_API_KEY);
-const itemCaptureSystem = new ItemCaptureSystem();
+// Initialize vision analyzer and item capture system with error handling
+let visionAnalyzer;
+let itemCaptureSystem;
+
+try {
+  visionAnalyzer = new VisionAnalyzer(process.env.OPENAI_API_KEY);
+  itemCaptureSystem = new ItemCaptureSystem();
+  console.log('✅ Vision analyzer and item capture system initialized');
+} catch (error) {
+  console.error('❌ Failed to initialize systems:', error);
+  // Continue without crashing - we'll handle this in the endpoints
+}
 
 // Model Configuration
 const MODEL_CONFIGS = {
@@ -94,6 +103,10 @@ app.post("/api/session-token", async (req, res) => {
 // Vision analysis endpoint
 app.post("/api/analyze-room", async (req, res) => {
   try {
+    if (!visionAnalyzer) {
+      return res.status(500).json({ error: "Vision analyzer not initialized" });
+    }
+
     const { imageData } = req.body;
     
     if (!imageData) {
@@ -114,6 +127,10 @@ app.post("/api/analyze-room", async (req, res) => {
 // Item capture endpoint
 app.post("/api/capture-item", async (req, res) => {
   try {
+    if (!itemCaptureSystem) {
+      return res.status(500).json({ error: "Item capture system not initialized" });
+    }
+
     const { imageData, description, category, priority } = req.body;
     
     if (!imageData || !description) {
@@ -158,6 +175,9 @@ app.post("/api/dave/note", async (req, res) => {
 // Admin endpoints for captured items
 app.get("/api/admin/items", (req, res) => {
   try {
+    if (!itemCaptureSystem) {
+      return res.status(500).json({ error: "Item capture system not initialized" });
+    }
     const items = itemCaptureSystem.getCapturedItems();
     res.json({ items });
   } catch (error) {
