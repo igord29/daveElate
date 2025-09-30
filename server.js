@@ -237,14 +237,20 @@ app.get("/api/health", (req, res) => {
   });
 });
 
-const PORT = process.env.PORT || 8000;
-app.listen(PORT, () => {
-  console.log("🏠 Dave - Professional Moving Consultant Server");
-  console.log("=".repeat(50));
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
-  console.log(`🎭 Dave's Avatar ID: ${DAVE_PERSONA_CONFIG.avatarId}`);
-  console.log(`🎤 Dave's Voice ID: ${DAVE_PERSONA_CONFIG.voiceId}`);
-  console.log(`🧠 Dave's LLM: GPT-4o with Vision (Real Image Analysis)`);
-  console.log(`⏱️  Session Duration: 30 minutes`);
-  console.log("✅ Ready for client consultations!");
-});
+// Export the app for Vercel serverless functions
+module.exports = app;
+
+// Only start server if not in serverless environment
+if (process.env.NODE_ENV !== 'production' || process.env.VERCEL !== '1') {
+  const PORT = process.env.PORT || 8000;
+  app.listen(PORT, () => {
+    console.log("🏠 Dave - Professional Moving Consultant Server");
+    console.log("=".repeat(50));
+    console.log(`🚀 Server running on http://localhost:${PORT}`);
+    console.log(`🎭 Dave's Avatar ID: ${DAVE_PERSONA_CONFIG.avatarId}`);
+    console.log(`🎤 Dave's Voice ID: ${DAVE_PERSONA_CONFIG.voiceId}`);
+    console.log(`🧠 Dave's LLM: GPT-4o with Vision (Real Image Analysis)`);
+    console.log(`⏱️  Session Duration: 30 minutes`);
+    console.log("✅ Ready for client consultations!");
+  });
+}
