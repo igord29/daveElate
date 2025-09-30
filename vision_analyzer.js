@@ -1,6 +1,8 @@
 // Vision Analysis Service for Dave
 // This handles real image analysis using OpenAI GPT-4o Vision
 
+const fetch = require('node-fetch');
+
 class VisionAnalyzer {
   constructor(openaiApiKey) {
     this.apiKey = openaiApiKey;
