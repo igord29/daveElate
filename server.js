@@ -19,14 +19,16 @@ const itemCaptureSystem = new ItemCaptureSystem();
 
 // Model Configuration
 const MODEL_CONFIGS = {
-  'gpt4o-mini': "0934d97d-0c3a-4f33-91b0-5e136a0ef466",     // GPT-4o Mini (recommended)
+  'gpt4o': "gpt-4o",                                         // GPT-4o with Vision (required for image analysis)
+  'gpt4o-mini': "0934d97d-0c3a-4f33-91b0-5e136a0ef466",     // GPT-4o Mini (no vision)
   'llama-70b': "ANAM_LLAMA_v3_3_70B_V1",                     // Llama 3.3 70B
   'gemini-flash': "9d8900ee-257d-4401-8817-ba9c835e9d36",     // Gemini 2.5 Flash
   'legacy': "ANAM_GPT_4O_MINI_V1"                            // Legacy GPT-4o Mini
 };
 
-const selectedModel = process.env.DAVE_MODEL || 'gpt4o-mini';
+const selectedModel = process.env.DAVE_MODEL || 'gpt4o';
 const modelName = {
+  'gpt4o': 'GPT-4o with Vision',
   'gpt4o-mini': 'GPT-4o Mini',
   'llama-70b': 'Llama 3.3 70B',
   'gemini-flash': 'Gemini 2.5 Flash',
@@ -238,11 +240,11 @@ app.get("/api/health", (req, res) => {
 const PORT = process.env.PORT || 8000;
 app.listen(PORT, () => {
   console.log("🏠 Dave - Professional Moving Consultant Server");
-  console.log("=" * 50);
+  console.log("=".repeat(50));
   console.log(`🚀 Server running on http://localhost:${PORT}`);
   console.log(`🎭 Dave's Avatar ID: ${DAVE_PERSONA_CONFIG.avatarId}`);
   console.log(`🎤 Dave's Voice ID: ${DAVE_PERSONA_CONFIG.voiceId}`);
-  console.log(`🧠 Dave's LLM: GPT-4o Mini + GPT-4o Vision (Real Image Analysis)`);
+  console.log(`🧠 Dave's LLM: GPT-4o with Vision (Real Image Analysis)`);
   console.log(`⏱️  Session Duration: 30 minutes`);
   console.log("✅ Ready for client consultations!");
 });
