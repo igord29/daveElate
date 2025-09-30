@@ -1,8 +1,15 @@
 {
   "version": 2,
+  "builds": [
+    {
+      "src": "api/**/*.js",
+      "use": "@vercel/node"
+    }
+  ],
   "routes": [
     { "src": "^/api/test", "dest": "/api/test.js" },
-    { "src": "^/api/(.*)", "dest": "/api/server-step1.js" }
+    { "src": "^/api/(.*)", "dest": "/api/server-step1.js" },
+    { "src": "^(.*)$", "dest": "/$1" }
   ],
   "functions": {
     "api/server-step1.js": {
