@@ -1,21 +1,9 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "api/**/*.js",
-      "use": "@vercel/node"
-    }
-  ],
   "routes": [
     { "src": "^/api/test", "dest": "/api/test.js" },
-    { "src": "^/api/(.*)", "dest": "/api/server-step1.js" },
-    { "src": "^(.*)$", "dest": "/$1" }
+    { "src": "^/api/(.*)", "dest": "/api/server-step1.js" }
   ],
-  "functions": {
-    "api/server-step1.js": {
-      "maxDuration": 30
-    }
-  },
   "env": {
     "AVATAR_API_KEY": "YjUxM2ExNjItOTBhYy00ZDZkLWFhNzgtZDYwNzMxN2ViZjZkOnhqMU9Mekg1Zm1qb1BONkJESkdmNk8zMithem9WaWh6WmVjK2ZDSnlDelk9",
     "DAVE_MODEL": "gpt4o",
