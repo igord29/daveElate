@@ -2,8 +2,10 @@
   "name": "dave-moving-consultant",
   "version": "1.0.0",
   "description": "Dave - Professional Moving Consultant with Anam.ai Integration",
+  "main": "server.js",
   "scripts": {
     "build": "echo 'No build step required for serverless functions - Cache cleared'",
+    "start": "node server.js",
     "dev": "vercel dev"
   },
   "engines": {
