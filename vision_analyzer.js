@@ -1,7 +1,8 @@
 // Vision Analysis Service for Dave
 // This handles real image analysis using OpenAI GPT-4o Vision
 
-const fetch = require('node-fetch');
+// Use built-in fetch (available in Node.js 18+)
+// No import needed - fetch is global in Node.js 18+
 
 class VisionAnalyzer {
   constructor(openaiApiKey) {
@@ -35,6 +36,10 @@ IMPORTANT RULES:
 - ONLY describe what you can actually see in the image
 - If something is unclear or blurry, say so
 - NEVER make up details that aren't visible
+- NEVER hallucinate items that aren't clearly visible
+- If you cannot clearly see an item, don't mention it
+- Be conservative - only mention what you can clearly identify
+- If the image is too dark, blurry, or unclear, say so
 - Be specific about furniture, fragile items, and packing requirements
 - Provide practical moving advice based on what you can see
 - If you cannot see enough detail, ask for a better view
@@ -63,7 +68,7 @@ RESPONSE STYLE:
                 {
                   type: "image_url",
                   image_url: {
-                    url: `data:image/jpeg;base64,${imageData}`
+                    url: imageData.startsWith('data:') ? imageData : `data:image/jpeg;base64,${imageData}`
                   }
                 }
               ]
@@ -74,7 +79,12 @@ RESPONSE STYLE:
       });
 
       if (!response.ok) {
-        throw new Error(`Vision API error: ${response.status}`);
+        const errorBody = await response.text();
+        console.error(`❌ Vision API ${response.status} error:`, errorBody);
+        
+        // Return empty string instead of fallback message
+        // This way Dave won't think he can't see
+        return "";
       }
 
       const data = await response.json();

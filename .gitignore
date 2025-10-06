@@ -1,131 +1,102 @@
-# Environment Variables (SENSITIVE - NEVER COMMIT)
+# Environment variables and sensitive data
 .env
 .env.local
 .env.production
 .env.development
 config.env
 production.env
+*.env
 
-# API Keys and Secrets
-*.key
-*.pem
-*.p12
-*.pfx
+# Documentation files (excluding essential ones)
+README.md
+README_ANAM.md
+COMPREHENSIVE_SECURITY_AUDIT.md
+CRITICAL_SECURITY_CLEANUP_REPORT.md
+DAVE_CONVERSATION_FIX.md
+DEPLOYMENT_GUIDE.md
+ELATE_DESIGN_UPDATE.md
+IMPLEMENTATION_SUMMARY.md
+MEETING_INTERFACE_GUIDE.md
+PROJECT_STATUS.md
+QUICK_START.md
+SECURITY_CHECKLIST.md
+SECURITY_FIX_SUMMARY.md
+TESTING_GUIDE.md
 
-# Captured Items (Contains Client Images)
-captured_items/
-*.jpg
-*.jpeg
-*.png
-*.gif
-*.webp
-
-# Logs
-logs/
-*.log
+# Node.js
+node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Runtime data
-pids/
-*.pid
-*.seed
-*.pid.lock
+# Captured items (user data)
+captured_items/
+*.jpg
+*.png
+*.jpeg
 
-# Coverage directory used by tools like istanbul
-coverage/
-*.lcov
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
 
-# nyc test coverage
-.nyc_output
-
-# Dependency directories
-node_modules/
-jspm_packages/
-
-# Optional npm cache directory
-.npm
-
-# Optional eslint cache
-.eslintcache
-
-# Microbundle cache
-.rpt2_cache/
-.rts2_cache_cjs/
-.rts2_cache_es/
-.rts2_cache_umd/
-
-# Optional REPL history
-.node_repl_history
-
-# Output of 'npm pack'
-*.tgz
-
-# Yarn Integrity file
-.yarn-integrity
-
-# dotenv environment variables file
-.env.test
-
-# parcel-bundler cache (https://parceljs.org/)
-.cache
-.parcel-cache
-
-# Next.js build output
-.next
-
-# Nuxt.js build / generate output
-.nuxt
-dist
-
-# Gatsby files
-.cache/
-public
-
-# Storybook build outputs
-.out
-.storybook-out
-
-# Temporary folders
-tmp/
-temp/
-
-# Editor directories and files
+# IDE files
 .vscode/
 .idea/
 *.swp
 *.swo
-*~
 
-# OS generated files
+# OS files
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
 Thumbs.db
 
-# Deployment files (may contain sensitive info)
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+
+# API test files (sensitive)
+api/debug-files.js
+api/server-fixed.js
+api/server-minimal.js
+api/server-step1.js
+api/static.js
+api/test-simple.js
+api/test.js
+
+# Test files
+test_anam_config.py
+test_config.py
+test.html
+simple_anam_test.html
+simple_avatar_test.html
+avatar-test.html
+camera-test.html
+livekit-test.html
+
+# Documentation files to ignore
+PROJECT_STATUS.md
+QUICK_START.md
+
+# Development files
+setup_custom_llm.js
+setup_env.py
+setup_meeting_system.py
+secure-deploy.sh
 deploy.sh
-*.sh
 
-# Database files
-*.db
-*.sqlite
-*.sqlite3
+# Python files (keeping only essential)
+avatar_agent.py
+dave_livekit_agent.py
+direct_anam_test.py
+enhanced_anam_agent.py
+simple_anam_agent.py
+report_generator.py
 
-# Backup files
-*.bak
-*.backup
-
-# Documentation with platform references
-README_ANAM.md
-
-# Environment templates
-env.template
-
-# Documentation guides
-DEPLOYMENT_GUIDE.md
-TESTING_GUIDE.md
+# Tools
+tools/

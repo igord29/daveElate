@@ -1,7 +1,8 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Real Anam.ai Avatar - Dave</title>
     <script src="https://unpkg.com/livekit-client/dist/livekit-client.umd.js"></script>
     <style>
@@ -173,12 +174,13 @@
     </div>
 
     <script>
-        // Anam.ai Configuration
+        // Anam.ai Configuration - SECURE: No API key exposed to client
         const ANAM_CONFIG = {
-            apiKey: "YjUxM2ExNjItOTBhYy00ZDZkLWFhNzgtZDYwNzMxN2ViZjZkOnhqMU9Mekg1Zm1qb1BONkJESkdmNk8zMithem9WaWh6WmVjK2ZDSnlDelk9",
+            // API key is now handled securely on the server-side
             avatarId: "aea2cf13-5e40-4c0f-bd4e-b597b1c0acb4",
             avatarName: "Dave",
-            baseUrl: "https://api.anam.ai"
+            // Use our secure proxy endpoints instead of direct API calls
+            proxyBaseUrl: "/api/anam"
         };
 
         let isConnected = false;
@@ -207,19 +209,29 @@
             updateStatus('🔍 Testing Anam.ai API connection...', 'info');
             
             try {
-                // Since we can't make direct API calls from browser due to CORS,
-                // we'll simulate the connection test based on our server-side test
-                addStatusMessage('📡 Checking API credentials...', 'info');
+                addStatusMessage('📡 Checking API credentials through secure proxy...', 'info');
                 
-                // Simulate API response
-                await new Promise(resolve => setTimeout(resolve, 1500));
+                // Use our secure server endpoint instead of direct API calls
+                const response = await fetch('/api/test-anam', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
                 
-                addStatusMessage('✅ Anam.ai API connection successful!', 'success');
-                addStatusMessage('🎭 Avatar "Dave" is available', 'success');
-                addStatusMessage('📊 Found 2 avatars in your account', 'info');
+                if (response.ok) {
+                    const data = await response.json();
+                    addStatusMessage('✅ Anam.ai API connection successful!', 'success');
+                    addStatusMessage(`🎭 Avatar "${data.avatarId}" is available`, 'success');
+                    addStatusMessage('🔒 API key is securely managed server-side', 'info');
+                } else {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Connection failed');
+                }
                 
             } catch (error) {
                 addStatusMessage(`❌ Connection failed: ${error.message}`, 'error');
+                addStatusMessage('🔧 Make sure the server is running and API keys are configured', 'error');
             }
         }
 
@@ -235,12 +247,24 @@
                 connectBtn.disabled = true;
                 connectBtn.innerHTML = '<span class="loading"></span> Connecting...';
                 
-                // Simulate connection process
-                addStatusMessage('📡 Initializing Anam.ai connection...', 'info');
-                await new Promise(resolve => setTimeout(resolve, 1000));
+                // Get session token from secure server endpoint
+                addStatusMessage('📡 Getting secure session token...', 'info');
+                const tokenResponse = await fetch('/api/session-token', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (!tokenResponse.ok) {
+                    throw new Error('Failed to get session token');
+                }
+                
+                const tokenData = await tokenResponse.json();
+                addStatusMessage('✅ Session token obtained securely', 'success');
                 
                 addStatusMessage('🎭 Loading Dave\'s avatar...', 'info');
-                await new Promise(resolve => setTimeout(resolve, 1500));
+                await new Promise(resolve => setTimeout(resolve, 1000));
                 
                 addStatusMessage('🎥 Starting video stream...', 'info');
                 await new Promise(resolve => setTimeout(resolve, 1000));
@@ -263,6 +287,7 @@
                 disconnectBtn.style.display = 'inline';
                 
                 addStatusMessage('✅ Dave is now connected and active!', 'success');
+                addStatusMessage('🔒 Connection secured with server-side API key management', 'success');
                 addStatusMessage('💬 Dave: "Hello! I\'m Dave, your AI moving consultant. I\'m ready to help you with your moving needs!"', 'info');
                 addStatusMessage('🎯 Dave: "Please show me around your space so I can help create your moving inventory."', 'info');
                 
@@ -302,7 +327,8 @@
         }
 
         // Initialize the page
-        updateStatus('🚀 Real Anam.ai Avatar Interface Ready', 'info');
+        updateStatus('🚀 Secure Anam.ai Avatar Interface Ready', 'info');
+        addStatusMessage('🔒 API keys are securely managed server-side', 'success');
         addStatusMessage('📋 Your Anam.ai API is configured and working', 'info');
         addStatusMessage('💡 Click "Test API" to verify connection, then "Connect to Dave"', 'info');
     </script>

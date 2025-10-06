@@ -229,12 +229,12 @@
     </div>
 
     <script>
-        // Anam.ai Configuration
+        // Anam.ai Configuration - SECURE: No API key exposed to client
         const ANAM_CONFIG = {
-            apiKey: "YjUxM2ExNjItOTBhYy00ZDZkLWFhNzgtZDYwNzMxN2ViZjZkOnhqMU9Mekg1Zm1qb1BONkJESkdmNk8zMithem9WaWh6WmVjK2ZDSnlDelk9",
-            avatarId: "aea2cf13-5e40-4c0f-bd4e-b597b1c0acb4",
+            // API key is now handled securely on the server-side
+            avatarId: "8dd64886-ce4b-47d5-b837-619660854768",
             avatarName: "Dave",
-            baseUrl: "https://api.anam.ai"
+            baseUrl: "/api/anam" // Use secure proxy endpoints
         };
 
         let anamConnection = null;
@@ -267,7 +267,7 @@
             try {
                 addMessage('🔍 Testing Anam.ai connection...', 'info');
                 
-                const response = await fetch(`${ANAM_CONFIG.baseUrl}/v1/avatars/${ANAM_CONFIG.avatarId}`, {
+                const response = await fetch(`${ANAM_CONFIG.baseUrl}/v1/personas/${ANAM_CONFIG.avatarId}`, {
                     method: 'GET',
                     headers: {
                         'Authorization': `Bearer ${ANAM_CONFIG.apiKey}`,

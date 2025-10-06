@@ -277,14 +277,14 @@
     </div>
 
     <script>
-        // Dave's Complete Configuration
+        // Dave's Complete Configuration - SECURE: No API key exposed to client
         const DAVE_CONFIG = {
             name: "Dave",
             avatarId: "8dd64886-ce4b-47d5-b837-619660854768", // Your updated avatar ID
             voiceId: "95c6316e-85ac-41ae-a0c1-aa5bf3a91f5a", // Your voice ID
             llmId: "0934d97d-0c3a-4f33-91b0-5e136a0ef466",   // GPT-4o Mini
-            apiKey: "YjUxM2ExNjItOTBhYy00ZDZkLWFhNzgtZDYwNzMxN2ViZjZkOnhqMU9Mekg1Zm1qb1BONkJESkdmNk8zMithem9WaWh6WmVjK2ZDSnlDelk9",
-            baseUrl: "https://api.anam.ai"
+            // API key is now handled securely on the server-side
+            baseUrl: "/api/anam" // Use secure proxy endpoints
         };
 
         let isConsultationActive = false;

@@ -246,7 +246,7 @@
             voiceId: "95c6316e-85ac-41ae-a0c1-aa5bf3a91f5a", // Your actual voice ID
             llmId: "0934d97d-0c3a-4f33-91b0-5e136a0ef466", // GPT-4o Mini
             systemPrompt: `[ROLE]
-You are Dave, a professional moving consultant with 15 years of experience in the moving industry. You help clients understand their moving needs, assess their inventory, and provide expert advice on packing, logistics, and moving strategies.
+You are Dave, a professional moving consultant for Elate moving with 15 years of experience in the moving industry. You help clients understand their moving needs, assess their inventory, and provide expert advice on packing, logistics, and moving strategies.
 
 [SPEAKING STYLE]
 You should attempt to understand the user's spoken requests, even if the speech-to-text transcription contains errors. Your responses will be converted to speech using a text-to-speech system. Therefore, your output must be plain, unformatted text.
@@ -293,10 +293,10 @@ When you receive a transcribed user request:
             maxSessionLengthSeconds: 1800, // 30 minutes
         };
 
-        // Anam.ai API Configuration
+        // Anam.ai API Configuration - SECURE: No API key exposed to client
         const ANAM_CONFIG = {
-            apiKey: "YjUxM2ExNjItOTBhYy00ZDZkLWFhNzgtZDYwNzMxN2ViZjZkOnhqMU9Mekg1Zm1qb1BONkJESkdmNk8zMithem9WaWh6WmVjK2ZDSnlDelk9",
-            baseUrl: "https://api.anam.ai"
+            // API key is now handled securely on the server-side
+            baseUrl: "/api/anam" // Use secure proxy endpoints
         };
 
         let isConsultationActive = false;
@@ -334,18 +334,32 @@ When you receive a transcribed user request:
             addConsultationMessage('🔍 Testing Anam.ai connection...', 'info');
             
             try {
-                // Simulate API test (in real implementation, this would make actual API calls)
-                addConsultationMessage('📡 Checking API credentials...', 'info');
-                await new Promise(resolve => setTimeout(resolve, 1000));
+                addConsultationMessage('📡 Checking API credentials through secure proxy...', 'info');
                 
-                addConsultationMessage('✅ Anam.ai API connection successful!', 'success');
-                addConsultationMessage('🎭 Dave\'s persona configuration loaded', 'success');
-                addConsultationMessage('📊 Session limit: 30 minutes', 'info');
+                // Use our secure server endpoint instead of direct API calls
+                const response = await fetch('/api/test-anam', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
                 
-                updateStatus('anamStatus', 'Connected');
+                if (response.ok) {
+                    const data = await response.json();
+                    addConsultationMessage('✅ Anam.ai API connection successful!', 'success');
+                    addConsultationMessage(`🎭 Avatar "${data.avatarId}" is available`, 'success');
+                    addConsultationMessage('🔒 API key is securely managed server-side', 'success');
+                    addConsultationMessage('📊 Session limit: 30 minutes', 'info');
+                    
+                    updateStatus('anamStatus', 'Connected');
+                } else {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Connection failed');
+                }
                 
             } catch (error) {
                 addConsultationMessage(`❌ Connection failed: ${error.message}`, 'error');
+                addConsultationMessage('🔧 Make sure the server is running and API keys are configured', 'error');
                 updateStatus('anamStatus', 'Connection Failed', true);
             }
         }
@@ -361,8 +375,24 @@ When you receive a transcribed user request:
                 startBtn.disabled = true;
                 startBtn.innerHTML = '<span class="loading"></span> Connecting...';
                 
+                // Get session token from secure server endpoint
+                addConsultationMessage('📡 Getting secure session token...', 'info');
+                const tokenResponse = await fetch('/api/session-token', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (!tokenResponse.ok) {
+                    throw new Error('Failed to get session token');
+                }
+                
+                const tokenData = await tokenResponse.json();
+                addConsultationMessage('✅ Session token obtained securely', 'success');
+                
                 addConsultationMessage('🤖 Initializing Dave\'s avatar...', 'info');
-                await new Promise(resolve => setTimeout(resolve, 1500));
+                await new Promise(resolve => setTimeout(resolve, 1000));
                 
                 addConsultationMessage('🎭 Loading persona configuration...', 'info');
                 await new Promise(resolve => setTimeout(resolve, 1000));
@@ -447,7 +477,8 @@ When you receive a transcribed user request:
         }
 
         // Initialize the page
-        addConsultationMessage('🚀 Dave\'s Moving Consultation System Ready', 'info');
+        addConsultationMessage('🚀 Secure Dave\'s Moving Consultation System Ready', 'info');
+        addConsultationMessage('🔒 API keys are securely managed server-side', 'success');
         addConsultationMessage('📋 Based on official Anam.ai documentation', 'info');
         addConsultationMessage('💡 Click "Test Anam.ai Connection" to verify setup', 'info');
         addConsultationMessage('🎯 Then click "Start Consultation with Dave" to begin', 'info');
