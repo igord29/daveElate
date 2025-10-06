@@ -467,15 +467,17 @@ async function switchCamera() {
             const nextIndex = (currentIndex + 1) % videoDevices.length;
             const nextDevice = videoDevices[nextIndex];
             
-            // Switch to next device
+            // Switch to next device with mobile-friendly constraints
             const newStream = await navigator.mediaDevices.getUserMedia({
-                video: { deviceId: nextDevice.deviceId },
+                video: { 
+                    deviceId: { ideal: nextDevice.deviceId },
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 }
+                },
                 audio: {
                     echoCancellation: true,
                     noiseSuppression: true,
-                    autoGainControl: false, // Add this
-                    channelCount: 1,
-                    sampleRate: 16000
+                    autoGainControl: false
                 }
             });
 
