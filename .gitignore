@@ -100,3 +100,6 @@ report_generator.py
 
 # Tools
 tools/
+
+# Vercel files (not needed for Railway)
+vercel.json
