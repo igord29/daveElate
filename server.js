@@ -1,4 +1,24 @@
 require("dotenv").config();
+
+console.log('========================================');
+console.log('Starting Dave Moving Consultant Server');
+console.log('Node version:', process.version);
+console.log('Environment:', process.env.NODE_ENV);
+console.log('Port:', process.env.PORT);
+console.log('========================================');
+
+// Validate required environment variables
+const requiredEnvVars = ['ANAM_API_KEY', 'OPENAI_API_KEY', 'ASSEMBLYAI_API_KEY'];
+const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
+
+if (missingVars.length > 0) {
+  console.error('❌ Missing required environment variables:', missingVars.join(', '));
+  console.error('Please set these in Railway dashboard under Variables');
+  // Don't exit - start server anyway for healthcheck
+}
+
+console.log('✅ Environment variables loaded');
+
 const express = require("express");
 const path = require("path");
 const app = express();
@@ -13,6 +33,17 @@ const AssemblyAI = require('assemblyai');
 // Add fetch for Node.js compatibility
 const fetch = require('node-fetch');
 global.fetch = fetch;
+
+// Add error handling to prevent crashes
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+  // Don't exit - keep server running
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('❌ Uncaught Exception:', error);
+  // Don't exit - keep server running
+});
 
 // Security middleware
 const rateLimit = require('express-rate-limit');
@@ -855,15 +886,24 @@ module.exports = app;
 
 // Create HTTP server and Socket.IO
 const server = http.createServer(app);
-const io = new Server(server, {
-  cors: {
-    origin: "*",
-    methods: ["GET", "POST"]
-  }
-});
 
-// Socket.IO real-time transcription for mobile
-io.on('connection', (socket) => {
+let io;
+try {
+  io = new Server(server, {
+    cors: {
+      origin: "*",
+      methods: ["GET", "POST"]
+    }
+  });
+  console.log('✅ Socket.io initialized');
+} catch (error) {
+  console.error('❌ Socket.io initialization failed:', error);
+  console.log('⚠️ Server will continue without Socket.io');
+}
+
+// Socket.IO real-time transcription for mobile (if available)
+if (io) {
+  io.on('connection', (socket) => {
     console.log('🔌 Client connected:', socket.id);
     let realtimeTranscriber = null;
     
@@ -945,21 +985,35 @@ io.on('connection', (socket) => {
       console.log('🔌 Client disconnected:', socket.id);
     });
   });
+} else {
+  console.warn("⚠️ Socket.IO not available - real-time transcription disabled");
+}
 
 // Start server for Railway deployment
 if (process.env.VERCEL !== '1') {
   const PORT = process.env.PORT || 8000;
-  server.listen(PORT, '0.0.0.0', () => {
+  const HOST = '0.0.0.0';
+  
+  server.listen(PORT, HOST, (err) => {
+    if (err) {
+      console.error('❌ Failed to start server:', err);
+      process.exit(1);
+    }
+    
     console.log("🏠 Dave - Professional Moving Consultant Server");
     console.log("=".repeat(50));
-    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`🚀 Server running on ${HOST}:${PORT}`);
     console.log(`🎭 Dave's Avatar ID: ${DAVE_PERSONA_CONFIG.avatarId}`);
     console.log(`🎤 Dave's Voice ID: ${DAVE_PERSONA_CONFIG.voiceId}`);
     console.log(`🧠 Dave's LLM: GPT-4o with Vision (Real Image Analysis)`);
     console.log(`⏱️  Session Duration: 30 minutes`);
     console.log(`🛡️  Usage Limits: ${USAGE_WARNING_THRESHOLD}min warning, ${USAGE_CRITICAL_THRESHOLD}min shutdown`);
     console.log("✅ Ready for client consultations! - Updated");
-    console.log("🔌 Socket.IO real-time transcription enabled");
+    if (io) {
+      console.log("🔌 Socket.IO real-time transcription enabled");
+    } else {
+      console.log("⚠️ Socket.IO disabled - using fallback methods");
+    }
   });
 }
 
