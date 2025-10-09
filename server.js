@@ -958,7 +958,7 @@ if (process.env.VERCEL !== '1') {
     console.log(`🧠 Dave's LLM: GPT-4o with Vision (Real Image Analysis)`);
     console.log(`⏱️  Session Duration: 30 minutes`);
     console.log(`🛡️  Usage Limits: ${USAGE_WARNING_THRESHOLD}min warning, ${USAGE_CRITICAL_THRESHOLD}min shutdown`);
-    console.log("✅ Ready for client consultations!");
+    console.log("✅ Ready for client consultations! - Updated");
     console.log("🔌 Socket.IO real-time transcription enabled");
   });
 }
