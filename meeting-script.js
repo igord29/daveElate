@@ -935,9 +935,13 @@ async function initializeDaveAvatar() {
             ctx.font = '24px Arial';
             ctx.fillText('Professional Moving Consultant', canvas.width / 2, canvas.height / 2 + 20);
             
-            ctx.font = '16px Arial';
+            ctx.font = 'bold 20px Arial';
+            ctx.fillStyle = '#ff6b35';
+            ctx.fillText('ELATE MOVING', canvas.width / 2, canvas.height / 2 + 60);
+            
+            ctx.font = '14px Arial';
             ctx.fillStyle = '#cccccc';
-            ctx.fillText('Powered by Anam.ai', canvas.width / 2, canvas.height / 2 + 60);
+            ctx.fillText('Professional Moving Services', canvas.width / 2, canvas.height / 2 + 85);
             
             // Add status indicator
             ctx.fillStyle = '#28a745';
@@ -945,11 +949,11 @@ async function initializeDaveAvatar() {
             ctx.arc(canvas.width - 30, 30, 10, 0, 2 * Math.PI);
             ctx.fill();
             
-            // Add avatar ID display
+            // Add Elate Moving branding
             ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
             ctx.font = '12px Arial';
             ctx.textAlign = 'left';
-            ctx.fillText('Avatar ID: 8dd64886...', 10, canvas.height - 20);
+            ctx.fillText('Dave - Elate Moving', 10, canvas.height - 20);
             
             // Convert canvas to video stream
             const avatarStream = canvas.captureStream(30);
