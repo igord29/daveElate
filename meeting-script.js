@@ -142,7 +142,58 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Pre-load the SDK for faster avatar initialization
     preloadSDK();
+    
+    // Mobile-specific initialization
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    if (isMobile) {
+        console.log('📱 Mobile device detected - setting up mobile-specific features');
+        setupMobileFeatures();
+    }
 });
+
+// Mobile-specific setup
+function setupMobileFeatures() {
+    // Add mobile-specific event listeners
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden && isMeetingActive) {
+            console.log('📱 App backgrounded - pausing speech recognition');
+            if (recognition) {
+                try {
+                    recognition.stop();
+                } catch (e) {
+                    console.log('📱 Speech recognition already stopped');
+                }
+            }
+        } else if (!document.hidden && isMeetingActive) {
+            console.log('📱 App foregrounded - resuming speech recognition');
+            setTimeout(() => {
+                if (isMeetingActive && recognition) {
+                    try {
+                        recognition.start();
+                    } catch (e) {
+                        console.log('📱 Failed to restart speech recognition:', e);
+                    }
+                }
+            }, 1000);
+        }
+    });
+    
+    // Handle mobile orientation changes
+    window.addEventListener('orientationchange', () => {
+        setTimeout(() => {
+            if (isMeetingActive) {
+                console.log('📱 Orientation changed - checking speech recognition');
+                if (recognition) {
+                    try {
+                        recognition.start();
+                    } catch (e) {
+                        console.log('📱 Speech recognition restart after orientation change failed:', e);
+                    }
+                }
+            }
+        }, 500);
+    });
+}
 
 // Setup event listeners
 function setupEventListeners() {
@@ -153,7 +204,8 @@ function setupEventListeners() {
     switchCameraBtn.addEventListener('click', switchCamera);
     daveGreetingBtn.addEventListener('click', triggerDaveGreeting);
     daveTipsBtn.addEventListener('click', triggerDaveTips);
-    noiseSuppressionBtn.addEventListener('click', toggleNoiseSuppression);
+    // Noise suppression disabled to prevent ding noise
+    // noiseSuppressionBtn.addEventListener('click', toggleNoiseSuppression);
     audioQualityBtn.addEventListener('click', showAudioQualityMetrics);
     
     // ============================================================================
@@ -236,42 +288,63 @@ async function startMeeting() {
             }
         }, 2000);
         
-        // Get user media with enhanced noise suppression (in parallel)
-        // First, enumerate devices to avoid virtual microphones
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        const audioInputs = devices.filter(d => d.kind === 'audioinput');
+        // Get user media with mobile-specific constraints
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        
+        if (isMobile) {
+            console.log('📱 Mobile device detected - using mobile-optimized audio constraints');
+            
+            // Mobile-specific audio constraints
+            localStream = await navigator.mediaDevices.getUserMedia({
+                video: { 
+                    width: { ideal: 1280, max: 1920 }, 
+                    height: { ideal: 720, max: 1080 },
+                    facingMode: 'user' // Front camera for mobile
+                },
+                audio: {
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: true, // Enable AGC for mobile
+                    sampleRate: 44100, // Standard mobile sample rate
+                    channelCount: 1
+                }
+            });
+        } else {
+            // Desktop-specific audio constraints
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const audioInputs = devices.filter(d => d.kind === 'audioinput');
 
-        console.log('🎤 Available audio inputs:', audioInputs.map(d => d.label));
+            console.log('🎤 Available audio inputs:', audioInputs.map(d => d.label));
 
-        // Filter out virtual microphones
-        const physicalMic = audioInputs.find(d => {
-            const label = d.label.toLowerCase();
-            return !label.includes('virtual') && 
-                   !label.includes('cable') && 
-                   !label.includes('voicemeeter') &&
-                   !label.includes('obs') &&
-                   !label.includes('wave link') &&
-                   d.deviceId !== 'default'; // Skip 'default' which might point to virtual
-        });
+            // Filter out virtual microphones
+            const physicalMic = audioInputs.find(d => {
+                const label = d.label.toLowerCase();
+                return !label.includes('virtual') && 
+                       !label.includes('cable') && 
+                       !label.includes('voicemeeter') &&
+                       !label.includes('obs') &&
+                       !label.includes('wave link') &&
+                       d.deviceId !== 'default';
+            });
 
-        // Use physical mic if found, otherwise use default
-        const micDeviceId = physicalMic ? physicalMic.deviceId : 'default';
-        console.log('🎤 Using microphone:', physicalMic ? physicalMic.label : 'default device');
+            const micDeviceId = physicalMic ? physicalMic.deviceId : 'default';
+            console.log('🎤 Using microphone:', physicalMic ? physicalMic.label : 'default device');
 
-        localStream = await navigator.mediaDevices.getUserMedia({
-            video: { 
-                width: 1280, 
-                height: 720 
-            },
-            audio: {
-                deviceId: { exact: micDeviceId }, // Force this specific device
-                echoCancellation: true,
-                noiseSuppression: true,
-                autoGainControl: false, // Changed from true to false - prevents amplifying leakage
-                channelCount: 1, // Mono is fine for speech
-                sampleRate: 16000 // Optimal for speech recognition
-            }
-        });
+            localStream = await navigator.mediaDevices.getUserMedia({
+                video: { 
+                    width: 1280, 
+                    height: 720 
+                },
+                audio: {
+                    deviceId: { exact: micDeviceId },
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: false,
+                    channelCount: 1,
+                    sampleRate: 16000
+                }
+            });
+        }
         
         console.log("✅ Camera and microphone access granted with noise suppression");
         
@@ -287,8 +360,8 @@ async function startMeeting() {
             addLogMessage('error', '❌ Camera video element not found');
         }
         
-        // Start audio level monitoring for noise detection
-        startAudioLevelMonitor();
+        // Audio level monitoring disabled to prevent ding noise
+        // startAudioLevelMonitor();
         
         // User guidance for best audio quality
         addLogMessage('info', '🎤 For best audio quality: minimize background noise and speak clearly toward your microphone');
@@ -325,8 +398,8 @@ async function stopMeeting() {
     try {
         console.log("⏹️ Stopping meeting...");
         
-        // Stop audio level monitoring
-        stopAudioLevelMonitor();
+        // Audio level monitoring disabled to prevent ding noise
+        // stopAudioLevelMonitor();
         
         // Stop speech recognition
         stopSpeechRecognition();
@@ -642,7 +715,7 @@ function enableControls() {
     switchCameraBtn.disabled = false;
     daveGreetingBtn.disabled = false;
     daveTipsBtn.disabled = false;
-    noiseSuppressionBtn.disabled = false;
+    // noiseSuppressionBtn.disabled = false; // Disabled to prevent ding noise
     audioQualityBtn.disabled = false;
     
     // Update noise suppression button state
@@ -657,7 +730,7 @@ function disableControls() {
     switchCameraBtn.disabled = true;
     daveGreetingBtn.disabled = true;
     daveTipsBtn.disabled = true;
-    noiseSuppressionBtn.disabled = true;
+    // noiseSuppressionBtn.disabled = true; // Disabled to prevent ding noise
     audioQualityBtn.disabled = true;
 }
 
@@ -1394,8 +1467,20 @@ function startSpeechRecognition() {
     }
     
     recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-    recognition.continuous = true;
-    recognition.interimResults = false;
+    
+    // Mobile-specific configuration
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    
+    if (isMobile) {
+        console.log('📱 Mobile device detected - applying mobile-specific settings');
+        recognition.continuous = false; // Mobile works better with non-continuous
+        recognition.interimResults = true; // Enable interim results for mobile
+        recognition.maxAlternatives = 1; // Limit alternatives for mobile
+    } else {
+        recognition.continuous = true;
+        recognition.interimResults = false;
+    }
+    
     recognition.lang = 'en-US';
     
     recognition.onstart = () => {
@@ -1404,7 +1489,28 @@ function startSpeechRecognition() {
     };
     
     recognition.onresult = async (event) => {
-        const transcript = event.results[event.results.length - 1][0].transcript;
+        // Handle mobile interim results differently
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        let transcript = '';
+        
+        if (isMobile && recognition.interimResults) {
+            // For mobile with interim results, get the final result
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+                if (event.results[i].isFinal) {
+                    transcript = event.results[i][0].transcript;
+                    break;
+                }
+            }
+        } else {
+            transcript = event.results[event.results.length - 1][0].transcript;
+        }
+        
+        // Only process if we have a meaningful transcript
+        if (!transcript || transcript.trim().length < 2) {
+            console.log('🎤 Empty or too short transcript, ignoring');
+            return;
+        }
+        
         console.log('👤 User said:', transcript);
         addLogMessage('info', `👤 You: ${transcript}`);
         
@@ -1509,17 +1615,75 @@ function startSpeechRecognition() {
     
     recognition.onerror = (event) => {
         console.error('Speech recognition error:', event.error);
+        
+        // Mobile-specific error handling
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        
         if (event.error === 'no-speech') {
             // Ignore no-speech errors
             return;
         }
+        
+        if (event.error === 'not-allowed') {
+            addLogMessage('error', '❌ Microphone permission denied. Please allow microphone access and refresh the page.');
+            return;
+        }
+        
+        if (event.error === 'network') {
+            addLogMessage('error', '❌ Network error. Please check your internet connection.');
+            return;
+        }
+        
+        if (isMobile && event.error === 'aborted') {
+            // Mobile-specific: user might have switched apps or locked screen
+            console.log('📱 Mobile speech recognition aborted - likely app switch or screen lock');
+            return;
+        }
+        
         addLogMessage('warning', `Speech error: ${event.error}`);
+        
+        // For mobile, try to restart after a delay
+        if (isMobile && isMeetingActive) {
+            setTimeout(() => {
+                if (isMeetingActive && recognition) {
+                    try {
+                        recognition.start();
+                        console.log('📱 Mobile speech recognition restarted after error');
+                    } catch (e) {
+                        console.error('📱 Failed to restart mobile speech recognition:', e);
+                    }
+                }
+            }, 2000);
+        }
     };
     
     recognition.onend = () => {
         // Auto-restart if meeting is still active
         if (isMeetingActive && recognition) {
-            recognition.start();
+            // Add small delay for mobile to prevent rapid restart issues
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            const delay = isMobile ? 1000 : 100; // 1 second delay for mobile, 100ms for desktop
+            
+            setTimeout(() => {
+                if (isMeetingActive && recognition) {
+                    try {
+                        recognition.start();
+                        console.log('🎤 Speech recognition restarted');
+                    } catch (error) {
+                        console.log('🎤 Speech recognition restart failed:', error.message);
+                        // Try again after a longer delay
+                        setTimeout(() => {
+                            if (isMeetingActive && recognition) {
+                                try {
+                                    recognition.start();
+                                } catch (e) {
+                                    console.error('🎤 Speech recognition restart failed again:', e.message);
+                                }
+                            }
+                        }, 2000);
+                    }
+                }
+            }, delay);
         }
     };
     
