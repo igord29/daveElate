@@ -5,6 +5,9 @@ const app = express();
 const VisionAnalyzer = require('./vision_analyzer');
 const ItemCaptureSystem = require('./item_capture_system');
 
+// AssemblyAI integration for mobile speech recognition
+const { AssemblyAI } = require('assemblyai');
+
 // Add fetch for Node.js compatibility
 const fetch = require('node-fetch');
 global.fetch = fetch;
@@ -214,6 +217,11 @@ app.get("/", (req, res) => {
 // Initialize vision analyzer and item capture system
 const visionAnalyzer = new VisionAnalyzer(process.env.OPENAI_API_KEY);
 const itemCaptureSystem = new ItemCaptureSystem();
+
+// Initialize AssemblyAI for mobile speech recognition
+const assemblyAI = new AssemblyAI({
+  apiKey: process.env.ASSEMBLYAI_API_KEY
+});
 
 // Model Configuration
 const MODEL_CONFIGS = {
@@ -557,6 +565,40 @@ app.post("/api/chat-stream", apiLimiter, async (req, res) => {
   } catch (error) {
     console.error("[ERROR] Custom LLM error:", error);
     res.status(500).json({ error: "Failed to generate response" });
+  }
+});
+
+// AssemblyAI speech recognition endpoint for mobile
+app.post("/api/speech-recognition", apiLimiter, async (req, res) => {
+  try {
+    const { audioData } = req.body;
+    
+    if (!audioData) {
+      return res.status(400).json({ error: "No audio data provided" });
+    }
+
+    console.log("[ASSEMBLYAI] Processing speech recognition...");
+    
+    // Convert base64 audio to buffer
+    const audioBuffer = Buffer.from(audioData, 'base64');
+    
+    // Transcribe using AssemblyAI
+    const transcript = await assemblyAI.transcripts.transcribe({
+      audio: audioBuffer,
+      language_code: 'en_us',
+      punctuate: true,
+      format_text: true
+    });
+    
+    console.log("[SUCCESS] AssemblyAI transcription:", transcript.text);
+    res.json({ 
+      transcript: transcript.text,
+      confidence: transcript.confidence || 0.8
+    });
+    
+  } catch (error) {
+    console.error("[ERROR] AssemblyAI speech recognition failed:", error);
+    res.status(500).json({ error: "Failed to process speech recognition" });
   }
 });
 

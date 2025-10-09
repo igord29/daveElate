@@ -1460,50 +1460,275 @@ async function captureVisionManually() {
 }
 
 function startSpeechRecognition() {
-    if (!window.SpeechRecognition && !window.webkitSpeechRecognition) {
-        console.error('Speech recognition not supported');
-        addLogMessage('error', 'Speech recognition not supported in this browser');
-        return;
-    }
-    
-    recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-    
-    // Mobile-specific configuration
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     
     if (isMobile) {
-        console.log('📱 Mobile device detected - applying mobile-specific settings');
-        recognition.continuous = false; // Mobile works better with non-continuous
-        recognition.interimResults = true; // Enable interim results for mobile
-        recognition.maxAlternatives = 1; // Limit alternatives for mobile
+        console.log('📱 Mobile device detected - using AssemblyAI for speech recognition');
+        startAssemblyAISpeechRecognition();
     } else {
+        // Desktop: Use browser speech recognition
+        if (!window.SpeechRecognition && !window.webkitSpeechRecognition) {
+            console.error('Speech recognition not supported');
+            addLogMessage('error', 'Speech recognition not supported in this browser');
+            return;
+        }
+        
+        recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
         recognition.continuous = true;
         recognition.interimResults = false;
+        recognition.lang = 'en-US';
+        
+        setupBrowserSpeechRecognition();
+    }
+}
+
+// AssemblyAI speech recognition for mobile
+function startAssemblyAISpeechRecognition() {
+    console.log('🎤 Starting AssemblyAI speech recognition for mobile');
+    addLogMessage('success', '🎤 AssemblyAI speech recognition active');
+    
+    // Start audio recording for AssemblyAI
+    startAudioRecording();
+}
+
+// Audio recording for AssemblyAI
+let mediaRecorder = null;
+let audioChunks = [];
+let isRecording = false;
+
+function startAudioRecording() {
+    if (!localStream) {
+        console.error('No local stream available for recording');
+        return;
     }
     
-    recognition.lang = 'en-US';
-    
+    try {
+        // Create MediaRecorder for audio capture
+        mediaRecorder = new MediaRecorder(localStream, {
+            mimeType: 'audio/webm;codecs=opus'
+        });
+        
+        audioChunks = [];
+        
+        mediaRecorder.ondataavailable = (event) => {
+            if (event.data.size > 0) {
+                audioChunks.push(event.data);
+            }
+        };
+        
+        mediaRecorder.onstop = async () => {
+            if (audioChunks.length > 0) {
+                await processAudioWithAssemblyAI();
+            }
+        };
+        
+        // Start recording
+        mediaRecorder.start(1000); // Record in 1-second chunks
+        isRecording = true;
+        console.log('🎤 Audio recording started for AssemblyAI');
+        
+        // Auto-stop and process after 3 seconds of silence
+        setTimeout(() => {
+            if (isRecording) {
+                stopAudioRecording();
+            }
+        }, 3000);
+        
+    } catch (error) {
+        console.error('❌ Failed to start audio recording:', error);
+        addLogMessage('error', '❌ Failed to start audio recording');
+    }
+}
+
+function stopAudioRecording() {
+    if (mediaRecorder && isRecording) {
+        mediaRecorder.stop();
+        isRecording = false;
+        console.log('🎤 Audio recording stopped');
+    }
+}
+
+async function processAudioWithAssemblyAI() {
+    try {
+        // Combine audio chunks
+        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+        
+        // Convert to base64
+        const base64Audio = await blobToBase64(audioBlob);
+        
+        console.log('🎤 Sending audio to AssemblyAI...');
+        
+        // Send to AssemblyAI endpoint
+        const response = await fetch('/api/speech-recognition', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                audioData: base64Audio
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`AssemblyAI request failed: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        const transcript = data.transcript;
+        
+        if (transcript && transcript.trim().length > 2) {
+            console.log('👤 User said (AssemblyAI):', transcript);
+            addLogMessage('info', `👤 You: ${transcript}`);
+            
+            // Process the transcript the same way as browser speech recognition
+            await processUserSpeech(transcript);
+        } else {
+            console.log('🎤 No speech detected, restarting recording...');
+            // Restart recording after a short delay
+            setTimeout(() => {
+                if (isMeetingActive) {
+                    startAudioRecording();
+                }
+            }, 1000);
+        }
+        
+    } catch (error) {
+        console.error('❌ AssemblyAI processing failed:', error);
+        addLogMessage('error', '❌ Speech recognition failed');
+        
+        // Restart recording after error
+        setTimeout(() => {
+            if (isMeetingActive) {
+                startAudioRecording();
+            }
+        }, 2000);
+    }
+}
+
+// Helper function to convert blob to base64
+function blobToBase64(blob) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+            const base64 = reader.result.split(',')[1];
+            resolve(base64);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+    });
+}
+
+// Process user speech (shared by both AssemblyAI and browser recognition)
+async function processUserSpeech(transcript) {
+    try {
+        // Add user message to conversation history
+        conversationHistory.push({ role: 'user', content: transcript });
+        
+        // Call your custom LLM with vision context and full history
+        const response = await fetch('/api/chat-stream', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                messages: conversationHistory
+            })
+        });
+        
+        if (!response.ok) {
+            console.error('LLM request failed');
+            return;
+        }
+        
+        // Stop speech recognition BEFORE processing Dave's response
+        if (recognition) {
+            try {
+                recognition.stop();
+                console.log('🎤 Pausing speech recognition while Dave talks');
+            } catch (e) {
+                // Already stopped
+            }
+        }
+        
+        // Stop AssemblyAI recording if active
+        if (mediaRecorder && isRecording) {
+            stopAudioRecording();
+        }
+        
+        // Read streaming response
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let fullResponse = '';
+        
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            
+            const chunk = decoder.decode(value);
+            const lines = chunk.split('\n').filter(line => line.trim());
+            
+            for (const line of lines) {
+                try {
+                    const data = JSON.parse(line);
+                    if (data.content) {
+                        fullResponse += data.content;
+                    }
+                } catch (e) {
+                    // Skip invalid JSON
+                }
+            }
+        }
+        
+        console.log('💬 Dave response:', fullResponse);
+
+        // Add to conversation history
+        conversationHistory.push({ role: 'assistant', content: fullResponse });
+
+        // Make Dave talk
+        if (daveAvatar && fullResponse) {
+            addLogMessage('info', `Dave: ${fullResponse}`);
+            daveAvatar.talk(fullResponse);
+            
+            // Conservative timing to prevent echo
+            const wordCount = fullResponse.split(' ').length;
+            const speakingTime = (wordCount / 90) * 60 * 1000; // 90 words per minute
+            const avatarProcessing = 3000;  // 3 seconds for avatar to process
+            const audioClearing = 5000;     // 5 seconds for audio to fully clear
+            const totalWaitTime = speakingTime + avatarProcessing + audioClearing;
+            
+            console.log(`⏱️ Waiting ${(totalWaitTime/1000).toFixed(1)}s for Dave to finish (${wordCount} words)`);
+            
+            setTimeout(() => {
+                if (isMeetingActive) {
+                    // Restart appropriate speech recognition
+                    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                    if (isMobile) {
+                        startAudioRecording();
+                    } else if (recognition) {
+                        try {
+                            recognition.start();
+                            console.log('🎤 Speech recognition restarted after Dave finished');
+                        } catch (e) {
+                            console.log('Recognition already running');
+                        }
+                    }
+                }
+            }, totalWaitTime);
+        }
+        
+    } catch (error) {
+        console.error('Error processing speech:', error);
+        addLogMessage('error', 'Failed to process speech');
+    }
+}
+
+// Browser speech recognition setup (for desktop)
+function setupBrowserSpeechRecognition() {
     recognition.onstart = () => {
         console.log('🎤 Speech recognition started');
         addLogMessage('success', '🎤 Listening...');
     };
     
     recognition.onresult = async (event) => {
-        // Handle mobile interim results differently
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        let transcript = '';
-        
-        if (isMobile && recognition.interimResults) {
-            // For mobile with interim results, get the final result
-            for (let i = event.resultIndex; i < event.results.length; i++) {
-                if (event.results[i].isFinal) {
-                    transcript = event.results[i][0].transcript;
-                    break;
-                }
-            }
-        } else {
-            transcript = event.results[event.results.length - 1][0].transcript;
-        }
+        const transcript = event.results[event.results.length - 1][0].transcript;
         
         // Only process if we have a meaningful transcript
         if (!transcript || transcript.trim().length < 2) {
@@ -1514,103 +1739,8 @@ function startSpeechRecognition() {
         console.log('👤 User said:', transcript);
         addLogMessage('info', `👤 You: ${transcript}`);
         
-        try {
-            // Add user message to conversation history
-            conversationHistory.push({ role: 'user', content: transcript });
-            
-            // Call your custom LLM with vision context and full history
-            const response = await fetch('/api/chat-stream', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    messages: conversationHistory
-                })
-            });
-            
-            if (!response.ok) {
-                console.error('LLM request failed');
-                return;
-            }
-            
-            // Stop speech recognition BEFORE processing Dave's response
-            if (recognition) {
-                try {
-                    recognition.stop();
-                    console.log('🎤 Pausing speech recognition while Dave talks');
-                } catch (e) {
-                    // Already stopped
-                }
-            }
-            
-            // Read streaming response
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder();
-            let fullResponse = '';
-            
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-                
-                const chunk = decoder.decode(value);
-                const lines = chunk.split('\n').filter(line => line.trim());
-                
-                for (const line of lines) {
-                    try {
-                        const data = JSON.parse(line);
-                        if (data.content) {
-                            fullResponse += data.content;
-                        }
-                    } catch (e) {
-                        // Skip invalid JSON
-                    }
-                }
-            }
-            
-            console.log('💬 Dave response:', fullResponse);
-
-            // Add to conversation history
-            conversationHistory.push({ role: 'assistant', content: fullResponse });
-
-            // Stop speech recognition while Dave talks
-            if (recognition) {
-                try {
-                    recognition.stop();
-                    console.log('🎤 Speech recognition stopped - Dave is speaking');
-                } catch (e) {
-                    // Already stopped
-                }
-            }
-
-            // Make Dave talk
-            if (daveAvatar && fullResponse) {
-                addLogMessage('info', `Dave: ${fullResponse}`);
-                daveAvatar.talk(fullResponse);
-                
-                // Conservative timing to prevent echo
-                const wordCount = fullResponse.split(' ').length;
-                const speakingTime = (wordCount / 90) * 60 * 1000; // 90 words per minute
-                const avatarProcessing = 3000;  // 3 seconds for avatar to process
-                const audioClearing = 5000;     // 5 seconds for audio to fully clear
-                const totalWaitTime = speakingTime + avatarProcessing + audioClearing;
-                
-                console.log(`⏱️ Waiting ${(totalWaitTime/1000).toFixed(1)}s for Dave to finish (${wordCount} words)`);
-                
-                setTimeout(() => {
-                    if (isMeetingActive && recognition) {
-                        try {
-                            recognition.start();
-                            console.log('🎤 Speech recognition restarted after Dave finished');
-                        } catch (e) {
-                            console.log('Recognition already running');
-                        }
-                    }
-                }, totalWaitTime);
-            }
-            
-        } catch (error) {
-            console.error('Error processing speech:', error);
-            addLogMessage('error', 'Failed to process speech');
-        }
+        // Use shared speech processing function
+        await processUserSpeech(transcript);
     };
     
     recognition.onerror = (event) => {
@@ -1691,10 +1821,18 @@ function startSpeechRecognition() {
 }
 
 function stopSpeechRecognition() {
+    // Stop browser speech recognition
     if (recognition) {
         recognition.stop();
         recognition = null;
-        console.log('🎤 Speech recognition stopped');
+        console.log('🎤 Browser speech recognition stopped');
+    }
+    
+    // Stop AssemblyAI recording
+    if (mediaRecorder && isRecording) {
+        stopAudioRecording();
+        mediaRecorder = null;
+        console.log('🎤 AssemblyAI recording stopped');
     }
 }
 
