@@ -219,9 +219,15 @@ const visionAnalyzer = new VisionAnalyzer(process.env.OPENAI_API_KEY);
 const itemCaptureSystem = new ItemCaptureSystem();
 
 // Initialize AssemblyAI for mobile speech recognition
-const assemblyAI = new AssemblyAI({
-  apiKey: process.env.ASSEMBLYAI_API_KEY
-});
+let assemblyAI = null;
+if (process.env.ASSEMBLYAI_API_KEY) {
+  assemblyAI = new AssemblyAI({
+    apiKey: process.env.ASSEMBLYAI_API_KEY
+  });
+  console.log("✅ AssemblyAI initialized for mobile speech recognition");
+} else {
+  console.warn("⚠️ ASSEMBLYAI_API_KEY not found - mobile speech recognition will use fallback");
+}
 
 // Model Configuration
 const MODEL_CONFIGS = {
@@ -577,6 +583,15 @@ app.post("/api/speech-recognition", apiLimiter, async (req, res) => {
       return res.status(400).json({ error: "No audio data provided" });
     }
 
+    if (!assemblyAI) {
+      console.warn("[WARNING] AssemblyAI not initialized - returning empty transcript");
+      return res.json({ 
+        transcript: "",
+        confidence: 0,
+        error: "AssemblyAI not configured"
+      });
+    }
+
     console.log("[ASSEMBLYAI] Processing speech recognition...");
     
     // Convert base64 audio to buffer
@@ -799,13 +814,13 @@ app.get("/api/test-anam", async (req, res) => {
 // Export the app for Vercel serverless functions
 module.exports = app;
 
-// Only start server if not in serverless environment
-if (process.env.NODE_ENV !== 'production' || process.env.VERCEL !== '1') {
+// Start server for Railway deployment
+if (process.env.VERCEL !== '1') {
   const PORT = process.env.PORT || 8000;
   app.listen(PORT, () => {
     console.log("🏠 Dave - Professional Moving Consultant Server");
     console.log("=".repeat(50));
-    console.log(`🚀 Server running on http://localhost:${PORT}`);
+    console.log(`🚀 Server running on port ${PORT}`);
     console.log(`🎭 Dave's Avatar ID: ${DAVE_PERSONA_CONFIG.avatarId}`);
     console.log(`🎤 Dave's Voice ID: ${DAVE_PERSONA_CONFIG.voiceId}`);
     console.log(`🧠 Dave's LLM: GPT-4o with Vision (Real Image Analysis)`);
