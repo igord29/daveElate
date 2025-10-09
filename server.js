@@ -4,11 +4,11 @@ const path = require("path");
 const app = express();
 const VisionAnalyzer = require('./vision_analyzer');
 const ItemCaptureSystem = require('./item_capture_system');
-const { Server } = require('socket.io');
 const http = require('http');
 
-// AssemblyAI integration for mobile speech recognition (optional)
-let AssemblyAI = null;
+const { Server } = require('socket.io');
+const AssemblyAI = require('assemblyai');
+
 
 // Add fetch for Node.js compatibility
 const fetch = require('node-fetch');
@@ -220,25 +220,40 @@ app.get("/", (req, res) => {
 const visionAnalyzer = new VisionAnalyzer(process.env.OPENAI_API_KEY);
 const itemCaptureSystem = new ItemCaptureSystem();
 
-// Initialize AssemblyAI for mobile speech recognition (optional)
-let assemblyAI = null;
-let assemblyAIClient = null;
+// Initialize AssemblyAI for mobile speech recognition (REQUIRED)
+if (!process.env.ASSEMBLYAI_API_KEY) {
+  console.error("❌ ASSEMBLYAI_API_KEY is required for mobile speech recognition");
+  console.error("❌ Please set ASSEMBLYAI_API_KEY environment variable");
+  process.exit(1);
+}
+
+// Initialize based on what's available
+let assemblyAI;
+let assemblyAIClient;
 try {
-  AssemblyAI = require('assemblyai');
-  if (process.env.ASSEMBLYAI_API_KEY) {
+  if (typeof AssemblyAI === 'function') {
+    // Direct constructor
     assemblyAI = new AssemblyAI({
       apiKey: process.env.ASSEMBLYAI_API_KEY
     });
     assemblyAIClient = new AssemblyAI({
       apiKey: process.env.ASSEMBLYAI_API_KEY
     });
-    console.log("✅ AssemblyAI initialized for mobile speech recognition");
+  } else if (AssemblyAI.AssemblyAI) {
+    // Named export
+    assemblyAI = new AssemblyAI.AssemblyAI({
+      apiKey: process.env.ASSEMBLYAI_API_KEY
+    });
+    assemblyAIClient = new AssemblyAI.AssemblyAI({
+      apiKey: process.env.ASSEMBLYAI_API_KEY
+    });
   } else {
-    console.warn("⚠️ ASSEMBLYAI_API_KEY not found - mobile speech recognition will use fallback");
+    throw new Error('Cannot find AssemblyAI constructor');
   }
+  console.log("✅ AssemblyAI initialized for mobile speech recognition");
 } catch (error) {
-  console.warn("⚠️ AssemblyAI module not available - mobile speech recognition will use fallback");
-  console.warn("⚠️ To enable mobile speech recognition, install: npm install assemblyai");
+  console.error('❌ AssemblyAI initialization failed:', error);
+  process.exit(1);
 }
 
 // Model Configuration
@@ -787,7 +802,7 @@ app.get("/api/health", (req, res) => {
     uptime: process.uptime(),
     environment: process.env.NODE_ENV || 'development',
     socketio: io ? 'connected' : 'disconnected',
-    assemblyai: process.env.ASSEMBLYAI_API_KEY ? 'configured' : 'missing',
+    assemblyai: process.env.ASSEMBLYAI_API_KEY ? 'configured' : 'required',
     active_sessions: activeSessions.size,
     total_minutes_used: totalMinutesUsed.toFixed(1)
   };
@@ -849,87 +864,87 @@ const io = new Server(server, {
 
 // Socket.IO real-time transcription for mobile
 io.on('connection', (socket) => {
-  console.log('🔌 Client connected:', socket.id);
-  let realtimeTranscriber = null;
-  
-  socket.on('start-transcription', async () => {
-    try {
-      console.log('🎤 Starting AssemblyAI real-time transcription for:', socket.id);
-      
-      if (!assemblyAIClient) {
-        socket.emit('transcription-error', 'AssemblyAI not configured');
-        return;
-      }
-      
-      // Create real-time transcriber
-      realtimeTranscriber = assemblyAIClient.realtime.transcriber({
-        sampleRate: 16000,
-        encoding: 'pcm_s16le'
-      });
-      
-      // Handle session begins
-      realtimeTranscriber.on('open', ({ sessionId }) => {
-        console.log('✅ Real-time session opened:', sessionId);
-        socket.emit('transcription-ready');
-      });
-      
-      // Handle transcription results
-      realtimeTranscriber.on('transcript', (transcript) => {
-        if (transcript.message_type === 'FinalTranscript') {
-          console.log('📝 Final transcript:', transcript.text);
-          socket.emit('transcript', {
-            text: transcript.text,
-            isFinal: true
-          });
-        } else if (transcript.message_type === 'PartialTranscript') {
-          socket.emit('transcript', {
-            text: transcript.text,
-            isFinal: false
-          });
+    console.log('🔌 Client connected:', socket.id);
+    let realtimeTranscriber = null;
+    
+    socket.on('start-transcription', async () => {
+      try {
+        console.log('🎤 Starting AssemblyAI real-time transcription for:', socket.id);
+        
+        if (!assemblyAIClient) {
+          socket.emit('transcription-error', 'AssemblyAI not configured');
+          return;
         }
-      });
-      
-      // Handle errors
-      realtimeTranscriber.on('error', (error) => {
-        console.error('❌ Real-time transcription error:', error);
+        
+        // Create real-time transcriber
+        realtimeTranscriber = assemblyAIClient.realtime.transcriber({
+          sampleRate: 16000,
+          encoding: 'pcm_s16le'
+        });
+        
+        // Handle session begins
+        realtimeTranscriber.on('open', ({ sessionId }) => {
+          console.log('✅ Real-time session opened:', sessionId);
+          socket.emit('transcription-ready');
+        });
+        
+        // Handle transcription results
+        realtimeTranscriber.on('transcript', (transcript) => {
+          if (transcript.message_type === 'FinalTranscript') {
+            console.log('📝 Final transcript:', transcript.text);
+            socket.emit('transcript', {
+              text: transcript.text,
+              isFinal: true
+            });
+          } else if (transcript.message_type === 'PartialTranscript') {
+            socket.emit('transcript', {
+              text: transcript.text,
+              isFinal: false
+            });
+          }
+        });
+        
+        // Handle errors
+        realtimeTranscriber.on('error', (error) => {
+          console.error('❌ Real-time transcription error:', error);
+          socket.emit('transcription-error', error.message);
+        });
+        
+        realtimeTranscriber.on('close', (code, reason) => {
+          console.log('🛑 Real-time transcription closed:', code, reason);
+        });
+        
+        // Connect to AssemblyAI
+        await realtimeTranscriber.connect();
+        
+      } catch (error) {
+        console.error('❌ Failed to start real-time transcription:', error);
         socket.emit('transcription-error', error.message);
-      });
-      
-      realtimeTranscriber.on('close', (code, reason) => {
-        console.log('🛑 Real-time transcription closed:', code, reason);
-      });
-      
-      // Connect to AssemblyAI
-      await realtimeTranscriber.connect();
-      
-    } catch (error) {
-      console.error('❌ Failed to start real-time transcription:', error);
-      socket.emit('transcription-error', error.message);
-    }
+      }
+    });
+    
+    socket.on('audio-data', (audioData) => {
+      if (realtimeTranscriber) {
+        realtimeTranscriber.sendAudio(audioData);
+      }
+    });
+    
+    socket.on('stop-transcription', async () => {
+      if (realtimeTranscriber) {
+        await realtimeTranscriber.close();
+        realtimeTranscriber = null;
+        console.log('🛑 Real-time transcription stopped for:', socket.id);
+      }
+    });
+    
+    socket.on('disconnect', async () => {
+      if (realtimeTranscriber) {
+        await realtimeTranscriber.close();
+        realtimeTranscriber = null;
+      }
+      console.log('🔌 Client disconnected:', socket.id);
+    });
   });
-  
-  socket.on('audio-data', (audioData) => {
-    if (realtimeTranscriber) {
-      realtimeTranscriber.sendAudio(audioData);
-    }
-  });
-  
-  socket.on('stop-transcription', async () => {
-    if (realtimeTranscriber) {
-      await realtimeTranscriber.close();
-      realtimeTranscriber = null;
-      console.log('🛑 Real-time transcription stopped for:', socket.id);
-    }
-  });
-  
-  socket.on('disconnect', async () => {
-    if (realtimeTranscriber) {
-      await realtimeTranscriber.close();
-      realtimeTranscriber = null;
-    }
-    console.log('🔌 Client disconnected:', socket.id);
-  });
-});
 
 // Start server for Railway deployment
 if (process.env.VERCEL !== '1') {
