@@ -5,8 +5,8 @@ const app = express();
 const VisionAnalyzer = require('./vision_analyzer');
 const ItemCaptureSystem = require('./item_capture_system');
 
-// AssemblyAI integration for mobile speech recognition
-const AssemblyAI = require('assemblyai');
+// AssemblyAI integration for mobile speech recognition (optional)
+let AssemblyAI = null;
 
 // Add fetch for Node.js compatibility
 const fetch = require('node-fetch');
@@ -218,15 +218,21 @@ app.get("/", (req, res) => {
 const visionAnalyzer = new VisionAnalyzer(process.env.OPENAI_API_KEY);
 const itemCaptureSystem = new ItemCaptureSystem();
 
-// Initialize AssemblyAI for mobile speech recognition
+// Initialize AssemblyAI for mobile speech recognition (optional)
 let assemblyAI = null;
-if (process.env.ASSEMBLYAI_API_KEY) {
-  assemblyAI = new AssemblyAI({
-    apiKey: process.env.ASSEMBLYAI_API_KEY
-  });
-  console.log("✅ AssemblyAI initialized for mobile speech recognition");
-} else {
-  console.warn("⚠️ ASSEMBLYAI_API_KEY not found - mobile speech recognition will use fallback");
+try {
+  AssemblyAI = require('assemblyai');
+  if (process.env.ASSEMBLYAI_API_KEY) {
+    assemblyAI = new AssemblyAI({
+      apiKey: process.env.ASSEMBLYAI_API_KEY
+    });
+    console.log("✅ AssemblyAI initialized for mobile speech recognition");
+  } else {
+    console.warn("⚠️ ASSEMBLYAI_API_KEY not found - mobile speech recognition will use fallback");
+  }
+} catch (error) {
+  console.warn("⚠️ AssemblyAI module not available - mobile speech recognition will use fallback");
+  console.warn("⚠️ To enable mobile speech recognition, install: npm install assemblyai");
 }
 
 // Model Configuration
