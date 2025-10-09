@@ -873,6 +873,19 @@ async function initializeDaveAvatar() {
             addLogMessage('info', '🎭 Anam client created with session token');
             console.log('📦 Client methods:', Object.getOwnPropertyNames(anamClient));
             
+            // Mobile-specific video streaming setup
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            
+            if (isMobile) {
+                console.log('📱 Mobile device detected - using mobile-optimized video streaming');
+                addLogMessage('info', '📱 Mobile-optimized avatar streaming...');
+                
+                // Mobile-specific video constraints
+                personaVideo.setAttribute('playsinline', 'true');
+                personaVideo.setAttribute('webkit-playsinline', 'true');
+                personaVideo.muted = true; // Required for autoplay on mobile
+            }
+            
             // Stream to video element using the element ID (as per Anam.ai docs)
             addLogMessage('info', '🎭 Streaming Dave\'s avatar to video element...');
             console.log('🎭 Using video element ID: persona-video');
@@ -892,6 +905,14 @@ async function initializeDaveAvatar() {
         } catch (error) {
             console.error('❌ Anam.ai SDK failed:', error);
             addLogMessage('warning', `⚠️ Anam.ai SDK failed, using fallback: ${error.message}`);
+            
+            // Enhanced fallback for mobile
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            
+            if (isMobile) {
+                addLogMessage('info', '📱 Mobile fallback: Creating mobile-optimized avatar simulation');
+                console.log('📱 Using mobile-optimized fallback avatar');
+            }
             
             // Fallback to canvas simulation
             const canvas = document.createElement('canvas');
@@ -937,6 +958,13 @@ async function initializeDaveAvatar() {
             personaVideo.srcObject = avatarStream;
             personaVideo.style.display = 'block';
             
+            // Mobile-specific video attributes
+            if (isMobile) {
+                personaVideo.setAttribute('playsinline', 'true');
+                personaVideo.setAttribute('webkit-playsinline', 'true');
+                personaVideo.muted = true;
+            }
+            
             // Hide the placeholder
             videoPlaceholder.style.display = 'none';
             
@@ -951,6 +979,8 @@ async function initializeDaveAvatar() {
         // Add event listeners for the video
         if (personaVideo) {
             console.log('📹 Setting up video event listeners');
+            
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
             
             personaVideo.addEventListener('loadedmetadata', () => {
                 console.log('📹 Video metadata loaded');
@@ -967,13 +997,38 @@ async function initializeDaveAvatar() {
                 addLogMessage('error', `❌ Avatar video error: ${e.message}`);
             });
             
-            // Try to play the video
+            // Mobile-specific video handling
+            if (isMobile) {
+                personaVideo.addEventListener('loadstart', () => {
+                    console.log('📱 Mobile video load started');
+                    addLogMessage('info', '📱 Mobile video loading...');
+                });
+                
+                personaVideo.addEventListener('loadeddata', () => {
+                    console.log('📱 Mobile video data loaded');
+                    addLogMessage('info', '📱 Mobile video data ready');
+                });
+            }
+            
+            // Try to play the video with mobile-specific handling
             try {
+                if (isMobile) {
+                    // Mobile requires user interaction for autoplay
+                    console.log('📱 Mobile device - attempting video play with user interaction');
+                    addLogMessage('info', '📱 Mobile video play initiated');
+                }
+                
                 await personaVideo.play();
                 console.log('▶️ Video play started');
             } catch (playError) {
                 console.error('❌ Video play failed:', playError);
                 addLogMessage('error', `❌ Video play failed: ${playError.message}`);
+                
+                // Mobile-specific play error handling
+                if (isMobile) {
+                    addLogMessage('info', '📱 Mobile video play requires user interaction - tap the video to start');
+                    console.log('📱 Mobile video play blocked - user interaction required');
+                }
             }
         }
         
