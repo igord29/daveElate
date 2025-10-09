@@ -1614,7 +1614,14 @@ function startAudioRecording() {
         
         mediaRecorder.onstop = async () => {
             if (audioChunks.length > 0) {
-                await processAudioWithAssemblyAI();
+                try {
+                    await processAudioWithAssemblyAI();
+                } catch (error) {
+                    console.error('❌ AssemblyAI processing failed:', error);
+                    addLogMessage('warning', '⚠️ AssemblyAI failed, trying browser speech recognition');
+                    // Fallback to browser speech recognition
+                    startBrowserSpeechRecognitionFallback();
+                }
             }
         };
         
@@ -2008,6 +2015,31 @@ function addMobileAudioButton() {
             audioButton.style.display = 'none';
         }
     }, 10000);
+}
+
+// Fallback browser speech recognition for mobile when AssemblyAI fails
+function startBrowserSpeechRecognitionFallback() {
+    console.log('🔄 Starting browser speech recognition fallback for mobile');
+    addLogMessage('info', '🔄 Using browser speech recognition...');
+    
+    if (!recognition) {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (SpeechRecognition) {
+            recognition = new SpeechRecognition();
+            setupBrowserSpeechRecognition();
+        } else {
+            addLogMessage('error', '❌ Speech recognition not supported on this device');
+            return;
+        }
+    }
+    
+    try {
+        recognition.start();
+        console.log('🎤 Browser speech recognition started as fallback');
+    } catch (error) {
+        console.error('❌ Browser speech recognition fallback failed:', error);
+        addLogMessage('error', '❌ Speech recognition not available');
+    }
 }
 
 // Export functions for global access
