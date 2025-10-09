@@ -6,7 +6,7 @@ const VisionAnalyzer = require('./vision_analyzer');
 const ItemCaptureSystem = require('./item_capture_system');
 
 // AssemblyAI integration for mobile speech recognition
-const { AssemblyAI } = require('assemblyai');
+const AssemblyAI = require('assemblyai');
 
 // Add fetch for Node.js compatibility
 const fetch = require('node-fetch');
