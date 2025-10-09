@@ -778,14 +778,26 @@ app.get("/api/admin/sessions", (req, res) => {
 // HEALTH & DIAGNOSTIC ENDPOINTS
 // ============================================================================
 
+// Health check endpoint for Railway
 app.get("/api/health", (req, res) => {
-  res.json({ 
-    status: "healthy", 
+  const health = {
+    status: "healthy",
     service: "Dave Moving Consultant",
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV || 'development',
+    socketio: io ? 'connected' : 'disconnected',
+    assemblyai: process.env.ASSEMBLYAI_API_KEY ? 'configured' : 'missing',
     active_sessions: activeSessions.size,
-    total_minutes_used: totalMinutesUsed.toFixed(1),
-    timestamp: new Date().toISOString()
-  });
+    total_minutes_used: totalMinutesUsed.toFixed(1)
+  };
+  
+  res.status(200).json(health);
+});
+
+// Root healthcheck (Railway checks this by default)
+app.get("/health", (req, res) => {
+  res.status(200).send("OK");
 });
 
 app.get("/api/test-anam", async (req, res) => {
@@ -922,7 +934,7 @@ io.on('connection', (socket) => {
 // Start server for Railway deployment
 if (process.env.VERCEL !== '1') {
   const PORT = process.env.PORT || 8000;
-  server.listen(PORT, () => {
+  server.listen(PORT, '0.0.0.0', () => {
     console.log("🏠 Dave - Professional Moving Consultant Server");
     console.log("=".repeat(50));
     console.log(`🚀 Server running on port ${PORT}`);
@@ -935,3 +947,20 @@ if (process.env.VERCEL !== '1') {
     console.log("🔌 Socket.IO real-time transcription enabled");
   });
 }
+
+// Graceful shutdown handling
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, closing server...');
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
+});
+
+process.on('SIGINT', () => {
+  console.log('SIGINT received, closing server...');
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
+});
