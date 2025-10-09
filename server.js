@@ -4,6 +4,8 @@ const path = require("path");
 const app = express();
 const VisionAnalyzer = require('./vision_analyzer');
 const ItemCaptureSystem = require('./item_capture_system');
+const { Server } = require('socket.io');
+const http = require('http');
 
 // AssemblyAI integration for mobile speech recognition (optional)
 let AssemblyAI = null;
@@ -220,10 +222,14 @@ const itemCaptureSystem = new ItemCaptureSystem();
 
 // Initialize AssemblyAI for mobile speech recognition (optional)
 let assemblyAI = null;
+let assemblyAIClient = null;
 try {
   AssemblyAI = require('assemblyai');
   if (process.env.ASSEMBLYAI_API_KEY) {
     assemblyAI = new AssemblyAI({
+      apiKey: process.env.ASSEMBLYAI_API_KEY
+    });
+    assemblyAIClient = new AssemblyAI({
       apiKey: process.env.ASSEMBLYAI_API_KEY
     });
     console.log("✅ AssemblyAI initialized for mobile speech recognition");
@@ -820,10 +826,103 @@ app.get("/api/test-anam", async (req, res) => {
 // Export the app for Vercel serverless functions
 module.exports = app;
 
+// Create HTTP server and Socket.IO
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"]
+  }
+});
+
+// Socket.IO real-time transcription for mobile
+io.on('connection', (socket) => {
+  console.log('🔌 Client connected:', socket.id);
+  let realtimeTranscriber = null;
+  
+  socket.on('start-transcription', async () => {
+    try {
+      console.log('🎤 Starting AssemblyAI real-time transcription for:', socket.id);
+      
+      if (!assemblyAIClient) {
+        socket.emit('transcription-error', 'AssemblyAI not configured');
+        return;
+      }
+      
+      // Create real-time transcriber
+      realtimeTranscriber = assemblyAIClient.realtime.transcriber({
+        sampleRate: 16000,
+        encoding: 'pcm_s16le'
+      });
+      
+      // Handle session begins
+      realtimeTranscriber.on('open', ({ sessionId }) => {
+        console.log('✅ Real-time session opened:', sessionId);
+        socket.emit('transcription-ready');
+      });
+      
+      // Handle transcription results
+      realtimeTranscriber.on('transcript', (transcript) => {
+        if (transcript.message_type === 'FinalTranscript') {
+          console.log('📝 Final transcript:', transcript.text);
+          socket.emit('transcript', {
+            text: transcript.text,
+            isFinal: true
+          });
+        } else if (transcript.message_type === 'PartialTranscript') {
+          socket.emit('transcript', {
+            text: transcript.text,
+            isFinal: false
+          });
+        }
+      });
+      
+      // Handle errors
+      realtimeTranscriber.on('error', (error) => {
+        console.error('❌ Real-time transcription error:', error);
+        socket.emit('transcription-error', error.message);
+      });
+      
+      realtimeTranscriber.on('close', (code, reason) => {
+        console.log('🛑 Real-time transcription closed:', code, reason);
+      });
+      
+      // Connect to AssemblyAI
+      await realtimeTranscriber.connect();
+      
+    } catch (error) {
+      console.error('❌ Failed to start real-time transcription:', error);
+      socket.emit('transcription-error', error.message);
+    }
+  });
+  
+  socket.on('audio-data', (audioData) => {
+    if (realtimeTranscriber) {
+      realtimeTranscriber.sendAudio(audioData);
+    }
+  });
+  
+  socket.on('stop-transcription', async () => {
+    if (realtimeTranscriber) {
+      await realtimeTranscriber.close();
+      realtimeTranscriber = null;
+      console.log('🛑 Real-time transcription stopped for:', socket.id);
+    }
+  });
+  
+  socket.on('disconnect', async () => {
+    if (realtimeTranscriber) {
+      await realtimeTranscriber.close();
+      realtimeTranscriber = null;
+    }
+    console.log('🔌 Client disconnected:', socket.id);
+  });
+});
+
 // Start server for Railway deployment
 if (process.env.VERCEL !== '1') {
   const PORT = process.env.PORT || 8000;
-  app.listen(PORT, () => {
+  server.listen(PORT, () => {
     console.log("🏠 Dave - Professional Moving Consultant Server");
     console.log("=".repeat(50));
     console.log(`🚀 Server running on port ${PORT}`);
@@ -833,5 +932,6 @@ if (process.env.VERCEL !== '1') {
     console.log(`⏱️  Session Duration: 30 minutes`);
     console.log(`🛡️  Usage Limits: ${USAGE_WARNING_THRESHOLD}min warning, ${USAGE_CRITICAL_THRESHOLD}min shutdown`);
     console.log("✅ Ready for client consultations!");
+    console.log("🔌 Socket.IO real-time transcription enabled");
   });
 }
