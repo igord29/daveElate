@@ -153,6 +153,37 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Mobile-specific setup
 function setupMobileFeatures() {
+    // Initialize mobile audio context on first user interaction
+    let audioContextInitialized = false;
+    
+    function initializeMobileAudio() {
+        if (audioContextInitialized) return;
+        
+        try {
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            if (AudioContextClass) {
+                const audioContext = new AudioContextClass();
+                if (audioContext.state === 'suspended') {
+                    audioContext.resume().then(() => {
+                        console.log('📱 Mobile audio context initialized');
+                        audioContextInitialized = true;
+                        addLogMessage('success', '📱 Mobile audio ready');
+                    });
+                } else {
+                    console.log('📱 Mobile audio context already active');
+                    audioContextInitialized = true;
+                }
+            }
+        } catch (error) {
+            console.log('📱 Mobile audio initialization failed:', error.message);
+        }
+    }
+    
+    // Initialize audio on first user interaction
+    document.addEventListener('touchstart', initializeMobileAudio, { once: true });
+    document.addEventListener('click', initializeMobileAudio, { once: true });
+    document.addEventListener('touchend', initializeMobileAudio, { once: true });
+    
     // Add mobile-specific event listeners
     document.addEventListener('visibilitychange', () => {
         if (document.hidden && isMeetingActive) {
@@ -896,8 +927,14 @@ async function initializeDaveAvatar() {
             addLogMessage('success', '🎉 Dave\'s avatar is now streaming!');
             console.log('✅ Avatar streaming to video element');
             
-            // Add Elate Moving logo overlay to Dave's video
-            addElateLogoOverlay();
+        // Add Elate Moving logo overlay to Dave's video
+        addElateLogoOverlay();
+        
+        // Add mobile audio enable button if on mobile
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        if (isMobile) {
+            addMobileAudioButton();
+        }
             
             // Add message logging for debugging
             setupMessageLogging(anamClient);
@@ -1744,6 +1781,32 @@ async function processUserSpeech(transcript) {
         // Make Dave talk
         if (daveAvatar && fullResponse) {
             addLogMessage('info', `Dave: ${fullResponse}`);
+            
+            // Mobile-specific audio handling
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            
+            if (isMobile) {
+                console.log('📱 Mobile device - handling audio playback');
+                addLogMessage('info', '📱 Mobile audio: Dave is speaking...');
+                
+                // Mobile browsers require user interaction for audio
+                // Try to enable audio context if needed
+                try {
+                    if (typeof AudioContext !== 'undefined' || typeof webkitAudioContext !== 'undefined') {
+                        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                        if (AudioContextClass) {
+                            const audioContext = new AudioContextClass();
+                            if (audioContext.state === 'suspended') {
+                                await audioContext.resume();
+                                console.log('📱 Mobile audio context resumed');
+                            }
+                        }
+                    }
+                } catch (audioError) {
+                    console.log('📱 Mobile audio context handling:', audioError.message);
+                }
+            }
+            
             daveAvatar.talk(fullResponse);
             
             // Conservative timing to prevent echo
@@ -1893,6 +1956,58 @@ function stopSpeechRecognition() {
         mediaRecorder = null;
         console.log('🎤 AssemblyAI recording stopped');
     }
+}
+
+// Add mobile audio enable button
+function addMobileAudioButton() {
+    const audioButton = document.createElement('button');
+    audioButton.id = 'mobile-audio-btn';
+    audioButton.innerHTML = '🔊 Enable Audio';
+    audioButton.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: #ff6b35;
+        color: white;
+        border: none;
+        padding: 12px 20px;
+        border-radius: 25px;
+        font-size: 14px;
+        font-weight: bold;
+        z-index: 1000;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        cursor: pointer;
+    `;
+    
+    audioButton.addEventListener('click', async () => {
+        try {
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            if (AudioContextClass) {
+                const audioContext = new AudioContextClass();
+                if (audioContext.state === 'suspended') {
+                    await audioContext.resume();
+                    console.log('📱 Mobile audio enabled by user');
+                    addLogMessage('success', '📱 Audio enabled! Dave can now speak.');
+                }
+            }
+            
+            // Hide the button after enabling
+            audioButton.style.display = 'none';
+            
+        } catch (error) {
+            console.error('📱 Mobile audio enable failed:', error);
+            addLogMessage('error', '📱 Failed to enable audio. Please try again.');
+        }
+    });
+    
+    document.body.appendChild(audioButton);
+    
+    // Auto-hide after 10 seconds
+    setTimeout(() => {
+        if (audioButton.parentNode) {
+            audioButton.style.display = 'none';
+        }
+    }, 10000);
 }
 
 // Export functions for global access
