@@ -13,6 +13,9 @@ let capturedItems = [];
 let daveAvatar = null;
 let visionUpdateCount = 0;
 
+// Mobile detection (declare once, use everywhere)
+const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
 // ============================================================================
 // SESSION CLEANUP - Enhanced session management
 // ============================================================================
@@ -144,7 +147,6 @@ document.addEventListener('DOMContentLoaded', function() {
     preloadSDK();
     
     // Mobile-specific initialization
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     if (isMobile) {
         console.log('📱 Mobile device detected - setting up mobile-specific features');
         setupMobileFeatures();
@@ -320,8 +322,6 @@ async function startMeeting() {
         }, 2000);
         
         // Get user media with mobile-specific constraints
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        
         if (isMobile) {
             console.log('📱 Mobile device detected - using mobile-optimized audio constraints');
             
@@ -905,8 +905,6 @@ async function initializeDaveAvatar() {
             console.log('📦 Client methods:', Object.getOwnPropertyNames(anamClient));
             
             // Mobile-specific video streaming setup
-            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-            
             if (isMobile) {
                 console.log('📱 Mobile device detected - using mobile-optimized video streaming');
                 addLogMessage('info', '📱 Mobile-optimized avatar streaming...');
@@ -931,7 +929,6 @@ async function initializeDaveAvatar() {
         addElateLogoOverlay();
         
         // Add mobile audio enable button if on mobile
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
         if (isMobile) {
             addMobileAudioButton();
         }
@@ -944,8 +941,6 @@ async function initializeDaveAvatar() {
             addLogMessage('warning', `⚠️ Anam.ai SDK failed, using fallback: ${error.message}`);
             
             // Enhanced fallback for mobile
-            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-            
             if (isMobile) {
                 addLogMessage('info', '📱 Mobile fallback: Creating mobile-optimized avatar simulation');
                 console.log('📱 Using mobile-optimized fallback avatar');
@@ -1556,8 +1551,6 @@ async function captureVisionManually() {
 }
 
 function startSpeechRecognition() {
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    
     if (isMobile) {
         console.log('📱 Mobile device detected - using AssemblyAI for speech recognition');
         startAssemblyAISpeechRecognition();
@@ -1790,8 +1783,6 @@ async function processUserSpeech(transcript) {
             addLogMessage('info', `Dave: ${fullResponse}`);
             
             // Mobile-specific audio handling
-            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-            
             if (isMobile) {
                 console.log('📱 Mobile device - handling audio playback');
                 addLogMessage('info', '📱 Mobile audio: Dave is speaking...');
@@ -1828,7 +1819,6 @@ async function processUserSpeech(transcript) {
             setTimeout(() => {
                 if (isMeetingActive) {
                     // Restart appropriate speech recognition
-                    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
                     if (isMobile) {
                         startAudioRecording();
                     } else if (recognition) {
@@ -1876,8 +1866,6 @@ function setupBrowserSpeechRecognition() {
         console.error('Speech recognition error:', event.error);
         
         // Mobile-specific error handling
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        
         if (event.error === 'no-speech') {
             // Ignore no-speech errors
             return;
@@ -1920,7 +1908,6 @@ function setupBrowserSpeechRecognition() {
         // Auto-restart if meeting is still active
         if (isMeetingActive && recognition) {
             // Add small delay for mobile to prevent rapid restart issues
-            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
             const delay = isMobile ? 1000 : 100; // 1 second delay for mobile, 100ms for desktop
             
             setTimeout(() => {
