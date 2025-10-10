@@ -5,7 +5,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
-    "build": "npm install"
+    "build": "npm install --no-cache"
   },
   "engines": {
     "node": ">=18.0.0",
