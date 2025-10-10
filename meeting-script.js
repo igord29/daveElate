@@ -926,6 +926,22 @@ async function initializeDaveAvatar() {
             addLogMessage('success', '🎉 Dave\'s avatar is now streaming!');
             console.log('✅ Avatar streaming to video element');
             
+            // Mobile-specific audio handling
+            if (isMobile) {
+                console.log('📱 Mobile device - configuring audio for Dave\'s avatar');
+                // Force unmute and play on mobile
+                personaVideo.muted = false;
+                personaVideo.volume = 1.0;
+                
+                // Attempt to play with user interaction
+                personaVideo.addEventListener('canplay', () => {
+                    personaVideo.play().catch(e => {
+                        console.log('[MOBILE] Autoplay blocked:', e);
+                        addLogMessage('info', '📱 Tap the video to enable Dave\'s audio');
+                    });
+                });
+            }
+            
         // Add Elate Moving logo overlay to Dave's video
         addElateLogoOverlay();
         
@@ -999,7 +1015,16 @@ async function initializeDaveAvatar() {
             if (isMobile) {
                 personaVideo.setAttribute('playsinline', 'true');
                 personaVideo.setAttribute('webkit-playsinline', 'true');
-                personaVideo.muted = true;
+                personaVideo.muted = false; // Unmute for mobile
+                personaVideo.volume = 1.0;
+                
+                // Attempt to play with user interaction
+                personaVideo.addEventListener('canplay', () => {
+                    personaVideo.play().catch(e => {
+                        console.log('[MOBILE] Fallback autoplay blocked:', e);
+                        addLogMessage('info', '📱 Tap the video to enable Dave\'s audio');
+                    });
+                });
             }
             
             // Hide the placeholder
@@ -2024,6 +2049,21 @@ function addMobileAudioButton() {
                     await audioContext.resume();
                     console.log('📱 Mobile audio enabled by user');
                     addLogMessage('success', '📱 Audio enabled! Dave can now speak.');
+                }
+            }
+            
+            // Also try to enable Dave's video audio
+            const personaVideo = document.getElementById('persona-video');
+            if (personaVideo) {
+                personaVideo.muted = false;
+                personaVideo.volume = 1.0;
+                try {
+                    await personaVideo.play();
+                    console.log('📱 Dave\'s video audio enabled');
+                    addLogMessage('success', '📱 Dave\'s audio is now enabled!');
+                } catch (playError) {
+                    console.log('📱 Dave\'s video play failed:', playError);
+                    addLogMessage('info', '📱 Tap Dave\'s video to enable his audio');
                 }
             }
             
