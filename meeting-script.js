@@ -157,6 +157,7 @@ document.addEventListener('DOMContentLoaded', function() {
 function setupMobileFeatures() {
     // Initialize mobile audio context on first user interaction
     let audioContextInitialized = false;
+    let globalAudioContext = null;
     
     function initializeMobileAudio() {
         if (audioContextInitialized) return;
@@ -164,9 +165,9 @@ function setupMobileFeatures() {
         try {
             const AudioContextClass = window.AudioContext || window.webkitAudioContext;
             if (AudioContextClass) {
-                const audioContext = new AudioContextClass();
-                if (audioContext.state === 'suspended') {
-                    audioContext.resume().then(() => {
+                globalAudioContext = new AudioContextClass();
+                if (globalAudioContext.state === 'suspended') {
+                    globalAudioContext.resume().then(() => {
                         console.log('📱 Mobile audio context initialized');
                         audioContextInitialized = true;
                         addLogMessage('success', '📱 Mobile audio ready');
@@ -1552,8 +1553,23 @@ async function captureVisionManually() {
 
 function startSpeechRecognition() {
     if (isMobile) {
-        console.log('📱 Mobile device detected - using AssemblyAI for speech recognition');
-        startAssemblyAISpeechRecognition();
+        console.log('📱 Mobile device detected - using browser speech recognition');
+        addLogMessage('info', '📱 Mobile speech recognition starting...');
+        
+        // Mobile: Use browser speech recognition (more reliable than AssemblyAI)
+        if (!window.SpeechRecognition && !window.webkitSpeechRecognition) {
+            console.error('Speech recognition not supported');
+            addLogMessage('error', 'Speech recognition not supported in this browser');
+            return;
+        }
+        
+        recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+        recognition.continuous = false; // Mobile works better with continuous=false
+        recognition.interimResults = true; // Enable interim results for mobile
+        recognition.maxAlternatives = 1;
+        recognition.lang = 'en-US';
+        
+        setupBrowserSpeechRecognition();
     } else {
         // Desktop: Use browser speech recognition
         if (!window.SpeechRecognition && !window.webkitSpeechRecognition) {
@@ -1803,6 +1819,11 @@ async function processUserSpeech(transcript) {
                 } catch (audioError) {
                     console.log('📱 Mobile audio context handling:', audioError.message);
                 }
+                
+                // Add mobile audio enable button if not already present
+                if (!document.getElementById('mobile-audio-btn')) {
+                    addMobileAudioButton();
+                }
             }
             
             daveAvatar.talk(fullResponse);
@@ -1847,7 +1868,21 @@ function setupBrowserSpeechRecognition() {
     };
     
     recognition.onresult = async (event) => {
-        const transcript = event.results[event.results.length - 1][0].transcript;
+        let transcript = '';
+        
+        // Handle mobile vs desktop differently
+        if (isMobile) {
+            // Mobile: Get the final result
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+                if (event.results[i].isFinal) {
+                    transcript = event.results[i][0].transcript;
+                    break;
+                }
+            }
+        } else {
+            // Desktop: Get the latest result
+            transcript = event.results[event.results.length - 1][0].transcript;
+        }
         
         // Only process if we have a meaningful transcript
         if (!transcript || transcript.trim().length < 2) {
@@ -1954,6 +1989,12 @@ function stopSpeechRecognition() {
 
 // Add mobile audio enable button
 function addMobileAudioButton() {
+    // Remove existing button if present
+    const existingButton = document.getElementById('mobile-audio-btn');
+    if (existingButton) {
+        existingButton.remove();
+    }
+    
     const audioButton = document.createElement('button');
     audioButton.id = 'mobile-audio-btn';
     audioButton.innerHTML = '🔊 Enable Audio';
@@ -1971,6 +2012,7 @@ function addMobileAudioButton() {
         z-index: 1000;
         box-shadow: 0 4px 12px rgba(0,0,0,0.3);
         cursor: pointer;
+        display: block;
     `;
     
     audioButton.addEventListener('click', async () => {
@@ -1996,12 +2038,8 @@ function addMobileAudioButton() {
     
     document.body.appendChild(audioButton);
     
-    // Auto-hide after 10 seconds
-    setTimeout(() => {
-        if (audioButton.parentNode) {
-            audioButton.style.display = 'none';
-        }
-    }, 10000);
+    // Don't auto-hide - let user control it
+    console.log('📱 Mobile audio button added');
 }
 
 // Fallback browser speech recognition for mobile when AssemblyAI fails
