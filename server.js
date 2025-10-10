@@ -27,7 +27,6 @@ const ItemCaptureSystem = require('./item_capture_system');
 const http = require('http');
 
 const { Server } = require('socket.io');
-const AssemblyAI = require('assemblyai');
 
 
 // Add fetch for Node.js compatibility
@@ -251,40 +250,29 @@ app.get("/", (req, res) => {
 const visionAnalyzer = new VisionAnalyzer(process.env.OPENAI_API_KEY);
 const itemCaptureSystem = new ItemCaptureSystem();
 
-// Initialize AssemblyAI for mobile speech recognition (REQUIRED)
-if (!process.env.ASSEMBLYAI_API_KEY) {
-  console.error("❌ ASSEMBLYAI_API_KEY is required for mobile speech recognition");
-  console.error("❌ Please set ASSEMBLYAI_API_KEY environment variable");
-  process.exit(1);
-}
+// Initialize AssemblyAI for mobile speech recognition
+let assemblyAI = null;
+let assemblyAIClient = null;
 
-// Initialize based on what's available
-let assemblyAI;
-let assemblyAIClient;
-try {
-  if (typeof AssemblyAI === 'function') {
-    // Direct constructor
-    assemblyAI = new AssemblyAI({
+if (process.env.ASSEMBLYAI_API_KEY) {
+  try {
+    const { AssemblyAI: AssemblyAIConstructor } = require('assemblyai');
+    
+    assemblyAI = new AssemblyAIConstructor({
       apiKey: process.env.ASSEMBLYAI_API_KEY
     });
-    assemblyAIClient = new AssemblyAI({
+    
+    assemblyAIClient = new AssemblyAIConstructor({
       apiKey: process.env.ASSEMBLYAI_API_KEY
     });
-  } else if (AssemblyAI.AssemblyAI) {
-    // Named export
-    assemblyAI = new AssemblyAI.AssemblyAI({
-      apiKey: process.env.ASSEMBLYAI_API_KEY
-    });
-    assemblyAIClient = new AssemblyAI.AssemblyAI({
-      apiKey: process.env.ASSEMBLYAI_API_KEY
-    });
-  } else {
-    throw new Error('Cannot find AssemblyAI constructor');
+    
+    console.log("✅ AssemblyAI initialized for mobile speech recognition");
+  } catch (error) {
+    console.error('[ERROR] AssemblyAI initialization failed:', error.message);
+    console.warn('[WARNING] Server will continue without AssemblyAI - speech recognition disabled');
   }
-  console.log("✅ AssemblyAI initialized for mobile speech recognition");
-} catch (error) {
-  console.error('❌ AssemblyAI initialization failed:', error);
-  process.exit(1);
+} else {
+  console.warn('[WARNING] ASSEMBLYAI_API_KEY not set - speech recognition disabled');
 }
 
 // Model Configuration
