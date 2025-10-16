@@ -120,8 +120,8 @@
 
     <script>
         // LiveKit Configuration
-        const url = "wss://elatemoving1-au2xcq3l.livekit.cloud";
-        const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTkxMDQ2ODksImlkZW50aXR5IjoibWVldGluZy11c2VyIiwiaXNzIjoiQVBJNjJEQVA4WXFRRHd0IiwibmFtZSI6Ik1lZXRpbmcgVXNlciIsIm5iZiI6MTc1OTA5NzQ4OSwic3ViIjoibWVldGluZy11c2VyIiwidmlkZW8iOnsicm9vbSI6IkVsYXRlLXJvb20iLCJyb29tSm9pbiI6dHJ1ZX19.T5MTNO8nvlMeSD6NXiXQivHgbBL6izkw4MWWUnCKZN4";
+        const url = "wss://YOUR_LIVEKIT_URL_HERE"; // Replace with your actual LiveKit URL
+        const token = "YOUR_LIVEKIT_TOKEN_HERE"; // Replace with your actual JWT token
         
         // Anam.ai Configuration - Update these with your actual values
         const ANAM_CONFIG = {
@@ -154,11 +154,52 @@
             document.getElementById('avatarStatus').textContent = status;
         }
 
+        // Check permissions before joining room
+        async function checkPermissions() {
+            try {
+                updateStatus('🔍 Checking camera and microphone permissions...');
+                
+                // Test camera permission
+                const cameraStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                cameraStream.getTracks().forEach(track => track.stop());
+                
+                // Test microphone permission  
+                const micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                micStream.getTracks().forEach(track => track.stop());
+                
+                updateStatus('✅ Camera and microphone permissions confirmed');
+                return true;
+                
+            } catch (error) {
+                console.error("❌ Permission check failed:", error);
+                
+                if (error.name === 'NotAllowedError') {
+                    updateStatus('❌ Camera and microphone permissions are required for the avatar to work.', true);
+                    updateStatus('💡 Please allow both camera and microphone access in your browser settings and refresh the page.', true);
+                } else if (error.name === 'NotFoundError') {
+                    updateStatus('❌ No camera or microphone found. Please connect a camera and microphone and try again.', true);
+                } else if (error.name === 'NotReadableError') {
+                    updateStatus('❌ Camera or microphone is being used by another application. Please close other applications and try again.', true);
+                } else {
+                    updateStatus(`❌ Permission check failed: ${error.message}`, true);
+                }
+                
+                return false;
+            }
+        }
+
         // Join LiveKit room
         async function joinRoom() {
             try {
                 updateStatus('🔄 Connecting to LiveKit room...');
                 document.getElementById('joinBtn').style.display = 'none';
+                
+                // Check permissions first
+                const permissionsOk = await checkPermissions();
+                if (!permissionsOk) {
+                    document.getElementById('joinBtn').style.display = 'inline';
+                    return;
+                }
                 
                 room = new LivekitClient.Room();
                 

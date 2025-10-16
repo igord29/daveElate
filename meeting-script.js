@@ -294,11 +294,56 @@ function setupEventListeners() {
     }, 60 * 1000);
 }
 
+// Check permissions before starting meeting
+async function checkPermissions() {
+    try {
+        console.log("🔍 Checking camera and microphone permissions...");
+        addLogMessage('info', '🔍 Checking camera and microphone permissions...');
+        
+        // Test camera permission
+        const cameraStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        cameraStream.getTracks().forEach(track => track.stop());
+        console.log("✅ Camera permission granted");
+        
+        // Test microphone permission  
+        const micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        micStream.getTracks().forEach(track => track.stop());
+        console.log("✅ Microphone permission granted");
+        
+        addLogMessage('success', '✅ Camera and microphone permissions confirmed');
+        return true;
+        
+    } catch (error) {
+        console.error("❌ Permission check failed:", error);
+        
+        if (error.name === 'NotAllowedError') {
+            addLogMessage('error', '❌ Camera and microphone permissions are required for the avatar to work.');
+            addLogMessage('info', '💡 Please allow both camera and microphone access in your browser settings and refresh the page.');
+            addLogMessage('info', '🔧 To enable permissions: Click the camera/microphone icons in your browser\'s address bar and select "Allow"');
+        } else if (error.name === 'NotFoundError') {
+            addLogMessage('error', '❌ No camera or microphone found. Please connect a camera and microphone and try again.');
+        } else if (error.name === 'NotReadableError') {
+            addLogMessage('error', '❌ Camera or microphone is being used by another application. Please close other applications and try again.');
+        } else {
+            addLogMessage('error', `❌ Permission check failed: ${error.message}`);
+        }
+        
+        return false;
+    }
+}
+
 // Start meeting function
 async function startMeeting() {
     try {
         console.log("🚀 Starting meeting...");
         updateStatus('starting', 'Starting meeting...');
+        
+        // Check permissions first
+        const permissionsOk = await checkPermissions();
+        if (!permissionsOk) {
+            updateStatus('error', 'Permissions required');
+            return;
+        }
         
         // Initialize session and get session token
         const data = await initializeSession();
@@ -387,10 +432,16 @@ async function startMeeting() {
             cameraVideo.style.display = 'block';
             console.log("✅ User camera connected to video element");
             addLogMessage('success', '📹 Your camera is now active');
+            
+            // Update camera status
+            updateCameraStatus('active');
         } else {
             console.error("❌ Camera video element not found");
             addLogMessage('error', '❌ Camera video element not found');
         }
+        
+        // Update microphone status
+        updateMicrophoneStatus('active');
         
         // Audio level monitoring disabled to prevent ding noise
         // startAudioLevelMonitor();
@@ -420,8 +471,32 @@ async function startMeeting() {
         
     } catch (error) {
         console.error("❌ Failed to start meeting:", error);
-        updateStatus('error', `Failed to start: ${error.message}`);
-        addLogMessage('error', `❌ Failed to start meeting: ${error.message}`);
+        
+        // Handle specific permission errors
+        if (error.name === 'NotAllowedError') {
+            if (error.message.includes('camera') || error.message.includes('video')) {
+                updateStatus('error', 'Camera permission denied');
+                addLogMessage('error', '❌ Camera permission denied. Please allow camera access in your browser settings and refresh the page.');
+                addLogMessage('info', '💡 To enable camera: Click the camera icon in your browser\'s address bar and select "Allow"');
+            } else if (error.message.includes('microphone') || error.message.includes('audio')) {
+                updateStatus('error', 'Microphone permission denied');
+                addLogMessage('error', '❌ Microphone permission denied. Please allow microphone access in your browser settings and refresh the page.');
+                addLogMessage('info', '💡 To enable microphone: Click the microphone icon in your browser\'s address bar and select "Allow"');
+            } else {
+                updateStatus('error', 'Camera and microphone permissions required');
+                addLogMessage('error', '❌ Camera and microphone permissions are required for the avatar to work properly.');
+                addLogMessage('info', '💡 Please allow both camera and microphone access in your browser settings and refresh the page.');
+            }
+        } else if (error.name === 'NotFoundError') {
+            updateStatus('error', 'Camera or microphone not found');
+            addLogMessage('error', '❌ No camera or microphone found. Please connect a camera and microphone and try again.');
+        } else if (error.name === 'NotReadableError') {
+            updateStatus('error', 'Camera or microphone in use');
+            addLogMessage('error', '❌ Camera or microphone is being used by another application. Please close other applications and try again.');
+        } else {
+            updateStatus('error', `Failed to start: ${error.message}`);
+            addLogMessage('error', `❌ Failed to start meeting: ${error.message}`);
+        }
     }
 }
 
@@ -451,6 +526,10 @@ async function stopMeeting() {
             cameraVideo.srcObject = null;
             cameraVideo.style.display = 'none';
         }
+        
+        // Reset status indicators
+        updateCameraStatus('inactive');
+        updateMicrophoneStatus('inactive');
         
         // Clean up Dave's avatar
         if (daveAvatar) {
@@ -776,16 +855,56 @@ function updateStatus(status, message) {
         daveStatus.className = 'status-value connected';
         cameraStatus.textContent = 'Active';
         cameraStatus.className = 'status-value connected';
+        microphoneStatus.textContent = 'Active';
+        microphoneStatus.className = 'status-value connected';
     } else if (status === 'error') {
         daveStatus.textContent = 'Error';
         daveStatus.className = 'status-value error';
         cameraStatus.textContent = 'Error';
         cameraStatus.className = 'status-value error';
+        microphoneStatus.textContent = 'Error';
+        microphoneStatus.className = 'status-value error';
     } else {
         daveStatus.textContent = 'Not Connected';
         daveStatus.className = 'status-value';
         cameraStatus.textContent = 'Not Active';
         cameraStatus.className = 'status-value';
+        microphoneStatus.textContent = 'Not Active';
+        microphoneStatus.className = 'status-value';
+    }
+}
+
+// Update camera status independently
+function updateCameraStatus(status) {
+    const cameraStatus = document.getElementById('cameraStatus');
+    if (cameraStatus) {
+        if (status === 'active') {
+            cameraStatus.textContent = 'Active';
+            cameraStatus.className = 'status-value connected';
+        } else if (status === 'error') {
+            cameraStatus.textContent = 'Error';
+            cameraStatus.className = 'status-value error';
+        } else {
+            cameraStatus.textContent = 'Not Active';
+            cameraStatus.className = 'status-value';
+        }
+    }
+}
+
+// Update microphone status independently
+function updateMicrophoneStatus(status) {
+    const microphoneStatus = document.getElementById('microphoneStatus');
+    if (microphoneStatus) {
+        if (status === 'active') {
+            microphoneStatus.textContent = 'Active';
+            microphoneStatus.className = 'status-value connected';
+        } else if (status === 'error') {
+            microphoneStatus.textContent = 'Error';
+            microphoneStatus.className = 'status-value error';
+        } else {
+            microphoneStatus.textContent = 'Not Active';
+            microphoneStatus.className = 'status-value';
+        }
     }
 }
 

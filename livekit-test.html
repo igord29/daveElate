@@ -13,15 +13,55 @@
     <video id="localVideo" autoplay playsinline muted style="width: 300px; height: 200px; border: 1px solid #ccc;"></video>
     <video id="remoteVideo" autoplay playsinline style="width: 300px; height: 200px; border: 1px solid #ccc;"></video>
     <script>
-      const url = "wss://elatemoving1-au2xcq3l.livekit.cloud"; // your project URL
-      const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTkxMDQ2ODksImlkZW50aXR5IjoibWVldGluZy11c2VyIiwiaXNzIjoiQVBJNjJEQVA4WXFRRHd0IiwibmFtZSI6Ik1lZXRpbmcgVXNlciIsIm5iZiI6MTc1OTA5NzQ4OSwic3ViIjoibWVldGluZy11c2VyIiwidmlkZW8iOnsicm9vbSI6IkVsYXRlLXJvb20iLCJyb29tSm9pbiI6dHJ1ZX19.T5MTNO8nvlMeSD6NXiXQivHgbBL6izkw4MWWUnCKZN4"; // your JWT
+      const url = "wss://YOUR_LIVEKIT_URL_HERE"; // Replace with your actual LiveKit URL
+      const token = "YOUR_LIVEKIT_TOKEN_HERE"; // Replace with your actual JWT token
       
       let room = null;
+
+      // Check permissions before joining room
+      async function checkPermissions() {
+        try {
+          document.getElementById('status').textContent = 'Checking camera and microphone permissions...';
+          
+          // Test camera permission
+          const cameraStream = await navigator.mediaDevices.getUserMedia({ video: true });
+          cameraStream.getTracks().forEach(track => track.stop());
+          
+          // Test microphone permission  
+          const micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          micStream.getTracks().forEach(track => track.stop());
+          
+          document.getElementById('status').textContent = 'Camera and microphone permissions confirmed';
+          return true;
+          
+        } catch (error) {
+          console.error("❌ Permission check failed:", error);
+          
+          if (error.name === 'NotAllowedError') {
+            document.getElementById('status').textContent = '❌ Camera and microphone permissions are required. Please allow both camera and microphone access in your browser settings and refresh the page.';
+          } else if (error.name === 'NotFoundError') {
+            document.getElementById('status').textContent = '❌ No camera or microphone found. Please connect a camera and microphone and try again.';
+          } else if (error.name === 'NotReadableError') {
+            document.getElementById('status').textContent = '❌ Camera or microphone is being used by another application. Please close other applications and try again.';
+          } else {
+            document.getElementById('status').textContent = `❌ Permission check failed: ${error.message}`;
+          }
+          
+          return false;
+        }
+      }
 
       async function joinRoom() {
         try {
           document.getElementById('status').textContent = 'Connecting...';
           document.getElementById('joinBtn').style.display = 'none';
+          
+          // Check permissions first
+          const permissionsOk = await checkPermissions();
+          if (!permissionsOk) {
+            document.getElementById('joinBtn').style.display = 'inline';
+            return;
+          }
           
           room = new LivekitClient.Room();
           
