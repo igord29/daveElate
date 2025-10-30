@@ -789,6 +789,13 @@
           </button>
         </div>
         
+        <!-- End Call Button - Visible during call -->
+        <div class="control-grid">
+          <button id="stop-meeting" class="btn btn-danger btn-large" disabled>
+            📞 End Call
+          </button>
+        </div>
+        
         <!-- HIDDEN: Non-customer-facing buttons - kept for development/testing -->
         <div class="control-grid" style="display: none;">
           <button id="allow-video" class="btn btn-info" disabled>
@@ -827,9 +834,6 @@
         </div>
         
         <div class="control-grid" style="display: none;">
-          <button id="stop-meeting" class="btn btn-danger" disabled>
-            ⏹️ Stop Meeting
-          </button>
           <button id="admin-dashboard" class="btn btn-primary" onclick="window.open('/admin.html', '_blank')">
             📊 Admin Dashboard
           </button>
