@@ -561,6 +561,11 @@ async function startMeeting() {
         // Enable controls
         enableControls();
         
+        // Activate mobile fullscreen interface
+        if (isMobile) {
+            activateMobileFullscreen();
+        }
+        
     } catch (error) {
         console.error("❌ Failed to start meeting:", error);
         
@@ -672,6 +677,11 @@ async function stopMeeting() {
         sessionToken = null;
         daveConnection = null;
         daveAvatar = null;
+        
+        // Deactivate mobile fullscreen
+        if (isMobile) {
+            deactivateMobileFullscreen();
+        }
         
         // Update UI
         updateMeetingControls();
@@ -1467,6 +1477,25 @@ async function initializeDaveAvatar() {
                 if (event.role === 'user') {
                     console.log('🎤 USER SPEAKING (real-time):', event.content);
                     addLogMessage('info', '🎤 You: ' + event.content);
+                    
+                    // ✅ CRITICAL: If user asks about vision, capture immediately
+                    const visionTriggers = [
+                        'what do you see', 'can you see', 'do you see', 
+                        'what color', 'what am i wearing', 'what shirt',
+                        'look at', 'showing you', 'see this', 'see that'
+                    ];
+                    
+                    const userMessage = event.content.toLowerCase();
+                    const isAskingAboutVision = visionTriggers.some(trigger => userMessage.includes(trigger));
+                    
+                    if (isAskingAboutVision) {
+                        console.log('👁️ User asking about vision - triggering immediate capture!');
+                        addLogMessage('info', '👁️ Updating Dave\'s view...');
+                        // Capture immediately when user asks what Dave sees
+                        setTimeout(() => {
+                            captureAndAnalyzeVision();
+                        }, 200); // Quick response
+                    }
                 } else if (event.role === 'assistant') {
                     console.log('🤖 DAVE SPEAKING (real-time):', event.content);
                     addLogMessage('success', '🤖 Dave: ' + event.content);
@@ -2184,17 +2213,20 @@ function startVisionUpdates() {
     isVisionActive = true;
     console.log("👁️ Starting vision updates...");
     
-    // Initial vision capture
-    captureAndAnalyzeVision();
+    // Capture vision IMMEDIATELY for instant feedback
+    setTimeout(() => {
+        captureAndAnalyzeVision();
+        console.log("👁️ Initial vision capture - Dave getting first look");
+    }, 500); // Small delay to let camera initialize
     
-    // Set up periodic vision updates every 30 seconds
+    // Set up periodic vision updates every 30 seconds for real-time experience
     visionInterval = setInterval(() => {
         if (isMeetingActive && isVisionActive) {
             captureAndAnalyzeVision();
         }
-    }, 60000); // 30 seconds
+    }, 30000); // 30 seconds for responsive updates
     
-    addLogMessage('info', '👁️ Vision monitoring started - Dave can see your room');
+    addLogMessage('info', '👁️ Vision monitoring started - Dave can see your room in real-time');
 }
 
 /**
@@ -2216,9 +2248,25 @@ async function captureAndAnalyzeVision() {
     if (!localStream || !isMeetingActive) return;
     
     try {
-        // Capture image from camera
+        // Capture image from camera - use correct video element
         const canvas = document.createElement('canvas');
-        const video = document.getElementById('cameraVideo');
+        
+        // On mobile fullscreen, use the mobile video elements
+        let video;
+        if (isMobile && document.body.classList.contains('meeting-active')) {
+            // Mobile fullscreen mode - capture from mobile camera video (PiP on front camera, fullscreen on back camera)
+            if (currentFacingMode === 'environment') {
+                // Back camera is fullscreen in mobile-persona-video
+                video = document.getElementById('mobile-persona-video');
+            } else {
+                // Front camera is in mobile-camera-video (PiP)
+                video = document.getElementById('mobile-camera-video');
+            }
+            console.log(`👁️ Mobile mode: Capturing from ${currentFacingMode} camera`);
+        } else {
+            // Desktop or mobile landing page - use regular cameraVideo
+            video = document.getElementById('cameraVideo');
+        }
         
         if (!video || !video.videoWidth || !video.videoHeight) {
             console.log("👁️ Camera not ready for vision capture");
@@ -2233,7 +2281,7 @@ async function captureAndAnalyzeVision() {
         // Convert to base64
         const imageData = canvas.toDataURL('image/jpeg', 0.8);
         
-        console.log("👁️ Capturing vision data...");
+        console.log("👁️ Capturing vision data from", video.id, "resolution:", canvas.width, "x", canvas.height);
         
         // Send to server for analysis
         const response = await fetch('/api/passive-vision', {
@@ -2248,6 +2296,20 @@ async function captureAndAnalyzeVision() {
             const data = await response.json();
             console.log("✅ Vision analysis completed:", data.analysis);
             addLogMessage('info', '👁️ Room analyzed - Dave can see your space');
+            
+            // ✅ CRITICAL: Send vision analysis to Dave via Anam SDK
+            if (anamClient && anamClient.sendUserMessage) {
+                try {
+                    // Format vision update to match Dave's system prompt expectations
+                    const visionMessage = `[CURRENT VISUAL CONTEXT FROM CAMERA]\n${data.analysis}\n\n**REMINDER: Describe ONLY what is explicitly stated above. If it says "dark" or "unclear", you MUST tell me you can't see clearly. DO NOT fabricate items.**`;
+                    
+                    await anamClient.sendUserMessage(visionMessage);
+                    console.log("✅ Vision context sent to Dave:", data.analysis.substring(0, 100) + "...");
+                    addLogMessage('success', '👁️ Dave can now see: ' + data.analysis.substring(0, 50) + '...');
+                } catch (visionError) {
+                    console.error("❌ Failed to send vision to Dave:", visionError);
+                }
+            }
             
             // Update vision analytics
             updateVisionAnalytics();
@@ -2800,12 +2862,329 @@ function startBrowserSpeechRecognitionFallback() {
     }
 }
 
+// ==================== MOBILE FULLSCREEN INTERFACE ====================
+
+/**
+ * Activate mobile fullscreen interface (Google Meet/WhatsApp style)
+ */
+function activateMobileFullscreen() {
+    if (!isMobile) {
+        console.log('⚠️ Not mobile device, skipping fullscreen activation');
+        return;
+    }
+    
+    console.log('📱 Activating mobile fullscreen interface...');
+    console.log('📱 isMobile check:', isMobile);
+    console.log('📱 window.innerWidth:', window.innerWidth);
+    
+    // CRITICAL: Add meeting-active class to body to trigger CSS
+    document.body.classList.add('meeting-active');
+    console.log('📱 Added meeting-active class to body');
+    console.log('📱 Body classes:', document.body.className);
+    
+    // Wait a moment for CSS to apply
+    setTimeout(() => {
+        // Move Dave's video to mobile interface
+        const personaVideo = document.getElementById('persona-video');
+        const mobilePersonaVideo = document.getElementById('mobile-persona-video');
+        
+        console.log('📱 Looking for video elements...');
+        console.log('- persona-video exists:', !!personaVideo);
+        console.log('- mobile-persona-video exists:', !!mobilePersonaVideo);
+        console.log('- persona-video has srcObject:', !!personaVideo?.srcObject);
+        
+        if (personaVideo && mobilePersonaVideo) {
+            if (personaVideo.srcObject) {
+                mobilePersonaVideo.srcObject = personaVideo.srcObject;
+                mobilePersonaVideo.muted = false;
+                mobilePersonaVideo.volume = 1.0;
+                mobilePersonaVideo.play().then(() => {
+                    console.log('✅ Dave\'s video playing in fullscreen');
+                }).catch(e => console.log('⚠️ Mobile video play error:', e));
+                console.log('📹 Dave\'s video moved to fullscreen');
+            } else {
+                console.log('⏳ Waiting for Dave\'s video stream...');
+                // Set up observer to wait for srcObject
+                const checkInterval = setInterval(() => {
+                    if (personaVideo.srcObject) {
+                        clearInterval(checkInterval);
+                        mobilePersonaVideo.srcObject = personaVideo.srcObject;
+                        mobilePersonaVideo.muted = false;
+                        mobilePersonaVideo.volume = 1.0;
+                        mobilePersonaVideo.play().catch(e => console.log('Mobile video play:', e));
+                        console.log('✅ Dave\'s video stream connected (delayed)');
+                    }
+                }, 500);
+                
+                // Clear after 10 seconds
+                setTimeout(() => clearInterval(checkInterval), 10000);
+            }
+        }
+        
+        // Move camera to PiP
+        const cameraVideo = document.getElementById('cameraVideo');
+        const mobileCameraVideo = document.getElementById('mobile-camera-video');
+        
+        console.log('📱 Looking for camera elements...');
+        console.log('- cameraVideo exists:', !!cameraVideo);
+        console.log('- mobile-camera-video exists:', !!mobileCameraVideo);
+        console.log('- localStream exists:', !!localStream);
+        
+        if (cameraVideo && mobileCameraVideo && localStream) {
+            mobileCameraVideo.srcObject = localStream;
+            mobileCameraVideo.muted = true; // Mute self-view
+            mobileCameraVideo.play().then(() => {
+                console.log('✅ Your camera playing in PiP');
+            }).catch(e => console.log('⚠️ Mobile camera play error:', e));
+            console.log('📹 Your camera moved to PiP');
+        } else {
+            console.error('❌ Missing camera elements or localStream');
+        }
+        
+        // Setup mobile control buttons
+        setupMobileControls();
+        
+        console.log('✅ Mobile fullscreen activation complete');
+        addLogMessage('success', '📱 Mobile fullscreen activated');
+        
+        // Check if mobile fullscreen is visible
+        const mobileFullscreen = document.querySelector('.mobile-fullscreen-call');
+        if (mobileFullscreen) {
+            const styles = window.getComputedStyle(mobileFullscreen);
+            console.log('📱 Mobile fullscreen display:', styles.display);
+            console.log('📱 Mobile fullscreen z-index:', styles.zIndex);
+        }
+    }, 100);
+}
+
+/**
+ * Deactivate mobile fullscreen interface
+ */
+function deactivateMobileFullscreen() {
+    if (!isMobile) return;
+    
+    console.log('📱 Deactivating mobile fullscreen interface...');
+    
+    // Remove meeting-active class
+    document.body.classList.remove('meeting-active');
+    
+    // Clear mobile video streams
+    const mobilePersonaVideo = document.getElementById('mobile-persona-video');
+    const mobileCameraVideo = document.getElementById('mobile-camera-video');
+    
+    if (mobilePersonaVideo) {
+        mobilePersonaVideo.srcObject = null;
+    }
+    
+    if (mobileCameraVideo) {
+        mobileCameraVideo.srcObject = null;
+    }
+    
+    console.log('📱 Mobile fullscreen deactivated');
+}
+
+/**
+ * Setup mobile control buttons
+ */
+function setupMobileControls() {
+    // Switch Camera Button
+    const mobileSwitchCameraBtn = document.getElementById('mobile-switch-camera-btn');
+    if (mobileSwitchCameraBtn) {
+        mobileSwitchCameraBtn.addEventListener('click', async () => {
+            console.log('📱 Mobile switch camera clicked');
+            await switchCamera();
+            
+            // SWAP videos based on camera mode
+            const mobilePersonaVideo = document.getElementById('mobile-persona-video');
+            const mobileCameraVideo = document.getElementById('mobile-camera-video');
+            const personaVideo = document.getElementById('persona-video');
+            
+            if (currentFacingMode === 'environment') {
+                // Back camera = Show YOUR camera fullscreen, Dave in PiP
+                console.log('📱 Back camera active - Swapping: Your camera → Fullscreen, Dave → PiP');
+                
+                if (mobilePersonaVideo && localStream) {
+                    mobilePersonaVideo.srcObject = localStream;
+                    mobilePersonaVideo.muted = true; // Mute self-view
+                    mobilePersonaVideo.style.transform = 'scaleX(1)'; // Normal orientation for back camera
+                }
+                
+                if (mobileCameraVideo && personaVideo?.srcObject) {
+                    mobileCameraVideo.srcObject = personaVideo.srcObject;
+                    mobileCameraVideo.muted = false; // Dave's audio
+                    mobileCameraVideo.volume = 1.0;
+                }
+                
+                addLogMessage('success', '📱 Back camera → Showing your place fullscreen');
+                
+            } else {
+                // Front camera = Show DAVE fullscreen, your camera in PiP
+                console.log('📱 Front camera active - Swapping: Dave → Fullscreen, Your camera → PiP');
+                
+                if (mobilePersonaVideo && personaVideo?.srcObject) {
+                    mobilePersonaVideo.srcObject = personaVideo.srcObject;
+                    mobilePersonaVideo.muted = false; // Dave's audio
+                    mobilePersonaVideo.volume = 1.0;
+                }
+                
+                if (mobileCameraVideo && localStream) {
+                    mobileCameraVideo.srcObject = localStream;
+                    mobileCameraVideo.muted = true; // Mute self-view
+                    mobileCameraVideo.style.transform = 'scaleX(-1)'; // Mirror front camera
+                }
+                
+                addLogMessage('success', '📱 Front camera → Showing Dave fullscreen');
+            }
+            
+            // ✅ CRITICAL: Capture vision IMMEDIATELY after camera switch
+            console.log('👁️ Triggering immediate vision update after camera switch');
+            setTimeout(() => {
+                captureAndAnalyzeVision();
+            }, 1000); // 1 second delay to let new camera stabilize
+        });
+    }
+    
+    // Mute/Unmute Button
+    const mobileMuteBtn = document.getElementById('mobile-mute-btn');
+    if (mobileMuteBtn) {
+        mobileMuteBtn.addEventListener('click', () => {
+            if (localStream) {
+                const audioTracks = localStream.getAudioTracks();
+                audioTracks.forEach(track => {
+                    track.enabled = !track.enabled;
+                });
+                
+                const isMuted = !audioTracks[0].enabled;
+                mobileMuteBtn.classList.toggle('muted', isMuted);
+                mobileMuteBtn.textContent = isMuted ? '🔇' : '🎤';
+                
+                console.log('📱 Mobile microphone:', isMuted ? 'muted' : 'unmuted');
+                addLogMessage('info', isMuted ? '🔇 Muted' : '🎤 Unmuted');
+            }
+        });
+    }
+    
+    // End Call Button
+    const mobileEndCallBtn = document.getElementById('mobile-end-call-btn');
+    if (mobileEndCallBtn) {
+        mobileEndCallBtn.addEventListener('click', async () => {
+            console.log('📱 Mobile end call clicked');
+            await stopMeeting();
+        });
+    }
+    
+    // Capture Button - Take photo during call
+    const mobileCaptureBtn = document.getElementById('mobile-capture-btn');
+    if (mobileCaptureBtn) {
+        mobileCaptureBtn.addEventListener('click', async () => {
+            console.log('📸 Capture button clicked');
+            
+            // Create canvas to capture current video frame
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Determine which video to capture (the one showing fullscreen)
+            let videoToCapture;
+            if (currentFacingMode === 'environment') {
+                // Back camera is fullscreen - capture your camera
+                videoToCapture = document.getElementById('mobile-persona-video');
+            } else {
+                // Front camera - Dave is fullscreen, but capture your camera view
+                const mobileCameraVideo = document.getElementById('mobile-camera-video');
+                videoToCapture = mobileCameraVideo || document.getElementById('mobile-persona-video');
+            }
+            
+            if (!videoToCapture || !videoToCapture.videoWidth) {
+                console.error('❌ No video available to capture');
+                addLogMessage('error', '❌ Cannot capture - no video');
+                return;
+            }
+            
+            // Set canvas size to match video
+            canvas.width = videoToCapture.videoWidth;
+            canvas.height = videoToCapture.videoHeight;
+            
+            // Draw current video frame to canvas
+            ctx.drawImage(videoToCapture, 0, 0, canvas.width, canvas.height);
+            
+            // Add flash effect
+            const flash = document.createElement('div');
+            flash.className = 'capture-flash';
+            document.body.appendChild(flash);
+            
+            setTimeout(() => {
+                flash.remove();
+            }, 300);
+            
+            // Convert to blob and download
+            canvas.toBlob(async (blob) => {
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+                const filename = `moving-item-${timestamp}.jpg`;
+                
+                // Create download link
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                a.click();
+                
+                URL.revokeObjectURL(url);
+                
+                console.log('✅ Photo captured:', filename);
+                addLogMessage('success', '📸 Photo captured!');
+                
+                // Optional: Send to server for analysis
+                try {
+                    const formData = new FormData();
+                    formData.append('image', blob, filename);
+                    
+                    const response = await fetch('/api/capture-item', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    if (response.ok) {
+                        console.log('✅ Photo sent to server for analysis');
+                        addLogMessage('success', '✅ Photo sent for analysis');
+                    }
+                } catch (error) {
+                    console.log('ℹ️ Could not send to server (optional):', error.message);
+                }
+            }, 'image/jpeg', 0.95);
+        });
+    }
+    
+    // Camera Button (currently just for show, can add camera on/off functionality)
+    const mobileCameraBtn = document.getElementById('mobile-camera-btn');
+    if (mobileCameraBtn) {
+        mobileCameraBtn.addEventListener('click', () => {
+            if (localStream) {
+                const videoTracks = localStream.getVideoTracks();
+                videoTracks.forEach(track => {
+                    track.enabled = !track.enabled;
+                });
+                
+                const isCameraOff = !videoTracks[0].enabled;
+                mobileCameraBtn.style.background = isCameraOff ? '#dc3545' : 'rgba(255, 255, 255, 0.2)';
+                mobileCameraBtn.textContent = isCameraOff ? '📹' : '📹';
+                
+                console.log('📱 Mobile camera:', isCameraOff ? 'off' : 'on');
+                addLogMessage('info', isCameraOff ? '📹 Camera off' : '📹 Camera on');
+            }
+        });
+    }
+    
+    console.log('📱 Mobile controls setup complete');
+}
+
 // Export functions for global access
 window.clearLog = clearLog;
 window.handleImageUpload = handleImageUpload;
 window.showVisionIndicator = showVisionIndicator;
 window.showVisionStatus = showVisionStatus;
 window.updateVisionAnalytics = updateVisionAnalytics;
+window.activateMobileFullscreen = activateMobileFullscreen;
+window.deactivateMobileFullscreen = deactivateMobileFullscreen;
 
 // Debug function for Dave audio testing
 document.addEventListener('DOMContentLoaded', () => {

@@ -125,7 +125,7 @@ class MeetingSystemSetup:
                     
                     # Update token in the file
                     updated_content = content.replace(
-                        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTg5MzA5ODcsImlkZW50aXR5IjoidGVzdC11c2VyIiwiaXNzIjoiQVBJNjJEQVA4WXFRRHd0IiwibmFtZSI6IlRlc3QgVXNlciIsIm5iZiI6MTc1ODkyOTc4Nywic3ViIjoidGVzdC11c2VyIiwidmlkZW8iOnsicm9vbSI6IkVsYXRlLXJvb20iLCJyb29tSm9pbiI6dHJ1ZX19.f3ulVyKlnrZA_S5eoeNUBCNvw6yK-jGRzJ-VP6mIk68',
+                        'YOUR_LIVEKIT_TOKEN_HERE',  # Replace with actual token
                         token
                     )
                     

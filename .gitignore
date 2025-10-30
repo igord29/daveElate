@@ -79,10 +79,6 @@ avatar-test.html
 camera-test.html
 livekit-test.html
 
-# Documentation files to ignore
-PROJECT_STATUS.md
-QUICK_START.md
-
 # Development files
 setup_custom_llm.js
 setup_env.py
@@ -100,6 +96,3 @@ report_generator.py
 
 # Tools
 tools/
-
-# Vercel files (not needed for Railway)
-vercel.json

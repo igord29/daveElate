@@ -27,7 +27,7 @@ After generating new token, update these files:
 ## 🎯 **Current Status Summary**
 
 ### **✅ Working:**
-- LiveKit connection to `wss://elatemoving1-au2xcq3l.livekit.cloud`
+- LiveKit connection to `wss://YOUR_LIVEKIT_URL_HERE`
 - Your Anam.ai persona "Dave" (ID: `aea2cf13-5e40-4c0f-bd4e-b597b1c0acb4`)
 - HTML client with camera/microphone
 - Multi-participant testing ready

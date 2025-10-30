@@ -22,6 +22,9 @@ console.log('✅ Environment variables loaded');
 const express = require("express");
 const path = require("path");
 const app = express();
+
+// Trust proxy for ngrok
+app.set('trust proxy', 1);
 const VisionAnalyzer = require('./vision_analyzer');
 const ItemCaptureSystem = require('./item_capture_system');
 const http = require('http');
@@ -197,6 +200,21 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false
 }));
 
+// CORS headers for mobile browsers
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  res.header('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
+  res.header('Cross-Origin-Embedder-Policy', 'unsafe-none');
+  
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(200);
+  } else {
+    next();
+  }
+});
+
 // Rate limiting for API endpoints
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -298,8 +316,23 @@ const DAVE_PERSONA_CONFIG = {
   name: "Dave",
   avatarId: "8dd64886-ce4b-47d5-b837-619660854768",
   voiceId: "95c6316e-85ac-41ae-a0c1-aa5bf3a91f5a",
-  llmId: "CUSTOMER_CLIENT_V1",
-  systemPrompt: `You are Dave from Elate Moving. You are a professional moving consultant. You work for Elate Moving company specifically. You must introduce yourself as "Dave from Elate Moving" in your first response. You must use only the actual vision data provided to you and never hallucinate items that aren't clearly visible.
+  llmId: MODEL_CONFIGS[selectedModel],
+  systemPrompt: `You are Dave from Elate Moving. You are a professional moving consultant. You work for Elate Moving company specifically. You must introduce yourself as "Dave from Elate Moving" in your first response.
+
+[CRITICAL VISION RULES - MUST FOLLOW]
+**NEVER HALLUCINATE ITEMS. ONLY DESCRIBE WHAT IS EXPLICITLY PROVIDED IN [CURRENT VISUAL CONTEXT].**
+
+If vision context says:
+- "dark" or "can't see" → Say "I'm having trouble seeing the room clearly. Could you adjust the lighting or camera?"
+- "unclear" or "blurry" → Say "The image is a bit unclear. Can you hold the camera steady?"
+- No items listed → Say "I can't make out specific items yet. Can you show me the room?"
+- Specific items listed → ONLY mention those exact items, nothing else
+
+**ABSOLUTELY FORBIDDEN:**
+- DO NOT make up furniture that isn't in the vision context
+- DO NOT assume items are present
+- DO NOT say "I can see" unless the vision context explicitly describes those items
+- DO NOT fabricate dressers, sofas, tables, boxes, or any items not mentioned in vision data
 
 [CONTEXT AWARENESS - READ FIRST]
 - The customer is calling YOU, a professional moving company, so they're already interested in professional help
@@ -308,7 +341,7 @@ const DAVE_PERSONA_CONFIG = {
 - If they're describing their inventory, they're ready for a quote - focus on gathering complete information
 
 [VISION CAPABILITIES]
-You can see the customer's room through their camera. Visual updates show you their furniture, items, and space. Use what you see to:
+When vision context provides clear item descriptions, use them to:
 - Identify complexity and scope requiring professional movers
 - Spot items needing expert handling (heavy furniture, pianos, antiques, fragile items)
 - Notice challenges DIY movers underestimate (stairs, tight spaces, heavy loads)
@@ -325,8 +358,8 @@ Responses are converted to speech - use natural, conversational language:
 [CONSULTATION STRATEGY]
 Your goal: Help customers understand why professional movers are worth it.
 
-1. **Visual assessment approach**
-   "I can see that heavy dresser behind you - that's easily 300 pounds. Have you moved furniture like that before?"
+1. **Visual assessment approach (ONLY when vision is clear)**
+   Example: "I can see [SPECIFIC ITEM FROM VISION CONTEXT] - that looks like it would need careful handling."
    
    Listen for DIY plans, then explain professional value:
    - Safety risks they face
@@ -428,7 +461,30 @@ app.post("/api/session-token", sessionTokenLimiter, async (req, res) => {
     
     console.log(`[SECURITY] Session token request from IP: ${req.ip}`);
     
-    const response = await fetch("https://api.anam.ai/v1/auth/session-token", {
+    console.log("[DEBUG] Making request to Anam.ai API...");
+    
+    // Add timeout wrapper
+    const fetchWithTimeout = async (url, options, timeoutMs = 30000) => {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+      
+      try {
+        const response = await fetch(url, {
+          ...options,
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        return response;
+      } catch (error) {
+        clearTimeout(timeoutId);
+        if (error.name === 'AbortError') {
+          throw new Error(`Request timeout after ${timeoutMs}ms`);
+        }
+        throw error;
+      }
+    };
+    
+    const response = await fetchWithTimeout("https://api.anam.ai/v1/auth/session-token", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -437,7 +493,9 @@ app.post("/api/session-token", sessionTokenLimiter, async (req, res) => {
       body: JSON.stringify({
         personaConfig: DAVE_PERSONA_CONFIG,
       }),
-    });
+    }, 30000);
+    
+    console.log("[DEBUG] Anam.ai API response status:", response.status);
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -447,21 +505,28 @@ app.post("/api/session-token", sessionTokenLimiter, async (req, res) => {
     }
 
     const data = await response.json();
+    console.log('[ANAM API FULL RESPONSE]:', JSON.stringify(data, null, 2));
     
-    // CRITICAL: Track this session
-    if (data.session_id) {
-      activeSessions.set(data.session_id, {
+    if (!data.sessionToken) {
+      console.error('[API ERROR] No sessionToken in response');
+      console.error('[API ERROR] Response data:', data);
+    }
+    
+    // CRITICAL: Track this session using sessionToken as the ID
+    const sessionId = data.sessionToken; // Use sessionToken as the session ID
+    if (sessionId) {
+      activeSessions.set(sessionId, {
         createdAt: new Date(),
         clientIp: req.ip,
         sessionToken: data.sessionToken
       });
-      console.log(`[SUCCESS] Session created: ${data.session_id}`);
+      console.log(`[SUCCESS] Session created: ${sessionId}`);
       console.log(`[STATS] Total active sessions: ${activeSessions.size}`);
     }
     
     res.json({ 
       sessionToken: data.sessionToken,
-      session_id: data.session_id // Send to client for cleanup
+      session_id: sessionId // Send sessionToken as session_id to client
     });
   } catch (error) {
     console.error("[ERROR] Failed to create session token:", error);
@@ -534,6 +599,22 @@ app.post("/api/passive-vision", apiLimiter, async (req, res) => {
   }
 });
 
+// NEW: Mobile capture button endpoint (simplified, no form data needed)
+app.post("/api/capture-item", apiLimiter, async (req, res) => {
+  try {
+    console.log("[CAPTURE] Mobile capture button - photo saved locally");
+    // Photo is already saved on client side via download
+    // This endpoint is optional - just acknowledges the capture
+    res.json({ 
+      success: true, 
+      message: "Photo captured successfully" 
+    });
+  } catch (error) {
+    console.error("[ERROR] Capture acknowledgment failed:", error);
+    res.status(500).json({ error: "Failed to process capture" });
+  }
+});
+
 app.post("/api/capture-for-admin", apiLimiter, async (req, res) => {
   try {
     const { imageData, note } = req.body;
@@ -565,17 +646,18 @@ app.post("/api/chat-stream", apiLimiter, async (req, res) => {
       {
         role: "system",
         content: DAVE_PERSONA_CONFIG.systemPrompt + 
-          (visionContext && visionContext.trim() !== "" && !visionContext.includes("having trouble") 
-            ? `\n\n[CURRENT VISUAL CONTEXT]\n${visionContext}` 
-            : "") +
+          (visionContext && visionContext.trim() !== "" 
+            ? `\n\n[CURRENT VISUAL CONTEXT]\n${visionContext}\n\n**REMINDER: Use ONLY the information above. If it says "dark" or "can't see", you MUST tell the customer you can't see clearly. DO NOT make up items.**` 
+            : "\n\n[CURRENT VISUAL CONTEXT]\nNo visual data available yet.\n\n**You cannot see the room yet. Say so if asked what you see.**") +
           (isFirstUserMessage 
             ? "" 
-            : "\n\n[IMPORTANT: You already introduced yourself. Do NOT say 'I'm Dave from Elate Moving' again.]")
+            : "\n\n[IMPORTANT: You already introduced yourself. DO NOT say 'I'm Dave from Elate Moving' again.]")
       },
       ...messages
     ];
     
     console.log("[AI] Calling OpenAI with", messages.length, "messages");
+    console.log("[VISION] Context being sent to Dave:", visionContext ? visionContext.substring(0, 200) + "..." : "No vision data");
     
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",

@@ -3,7 +3,7 @@
 ## ✅ **Current Working Status**
 
 ### **What's Working Perfectly:**
-- ✅ **LiveKit Connection**: Connected to `wss://elatemoving1-au2xcq3l.livekit.cloud`
+- ✅ **LiveKit Connection**: Connected to `wss://YOUR_LIVEKIT_URL_HERE`
 - ✅ **Your Anam.ai Persona "Dave"**: Configured with ID `aea2cf13-5e40-4c0f-bd4e-b597b1c0acb4`
 - ✅ **All Credentials**: API keys and secrets are correct
 - ✅ **HTML Client**: `anam-avatar-test.html` and `simple_avatar_test.html` working
@@ -60,18 +60,22 @@ python direct_anam_test.py
 
 ### **Environment Variables (.env):**
 ```
-LIVEKIT_URL=wss://elatemoving1-au2xcq3l.livekit.cloud
-LIVEKIT_API_KEY=API62DAP8YqQDwt
-LIVEKIT_API_SECRET=ex4FXV15fPXYpa0sYyOPb8cwiLCezfiTkvZMfnELeLFF
-ANAM_API_KEY=YjUxM2ExNjItOTBhYy00ZDZkLWFhNzgtZDYwNzMxN2ViZjZkOnhqMU9Mekg1Zm1qb1BONkJESkdmNk8zMithem9WaWh6WmVjK2ZDSnlDelk9
+LIVEKIT_URL=wss://YOUR_LIVEKIT_URL_HERE
+LIVEKIT_API_KEY=your_livekit_api_key_here
+LIVEKIT_API_SECRET=your_livekit_api_secret_here
+ANAM_API_KEY=your_anam_api_key_here
 ANAM_AVATAR_ID=aea2cf13-5e40-4c0f-bd4e-b597b1c0acb4
 ANAM_AVATAR_NAME=Dave
 ```
 
+**⚠️ SECURITY NOTE**: Never commit real API keys to version control. Use environment variables and secure storage.
+
 ### **Current Token (Expires in 20 minutes):**
 ```
-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTg5MzA5ODcsImlkZW50aXR5IjoidGVzdC11c2VyIiwiaXNzIjoiQVBJNjJEQVA4WXFRRHd0IiwibmFtZSI6IlRlc3QgVXNlciIsIm5iZiI6MTc1ODkyOTc4Nywic3ViIjoidGVzdC11c2VyIiwidmlkZW8iOnsicm9vbSI6IkVsYXRlLXJvb20iLCJyb29tSm9pbiI6dHJ1ZX19.f3ulVyKlnrZA_S5eoeNUBCNvw6yK-jGRzJ-VP6mIk68
+[TOKEN_REMOVED_FOR_SECURITY] - Use environment variables or secure token generation
 ```
+
+**⚠️ SECURITY NOTE**: Never commit JWT tokens to version control. Use secure token generation.
 
 ## 🎯 **Current Progress Update**
 

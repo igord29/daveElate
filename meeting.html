@@ -314,8 +314,268 @@
       background: #5a6268;
     }
     
-    /* Mobile Responsive */
+    /* Mobile Full-Screen Interface (Google Meet/WhatsApp Style) */
     @media (max-width: 768px) {
+      /* LANDING PAGE: Hide video boxes before meeting starts */
+      .video-conference {
+        display: none !important;
+      }
+      
+      /* Make controls panel cleaner and centered */
+      .meeting-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
+      
+      .controls-panel {
+        width: 100%;
+        max-width: 400px;
+        margin: 0 auto;
+      }
+      
+      .controls-panel h3 {
+        text-align: center;
+        margin-bottom: 20px;
+      }
+      
+      /* Hide unnecessary panels on landing page */
+      .status-panel,
+      .consultation-panel {
+        display: none !important;
+      }
+      
+      /* Make buttons larger and more touch-friendly on mobile */
+      .btn {
+        padding: 16px 24px;
+        font-size: 16px;
+        min-height: 56px;
+        touch-action: manipulation;
+      }
+      
+      .btn-large {
+        padding: 20px 32px;
+        font-size: 18px;
+        min-height: 64px;
+      }
+      
+      .control-grid {
+        gap: 15px;
+      }
+      
+      /* Make the header more compact on mobile landing */
+      .header {
+        padding: 20px;
+        text-align: center;
+      }
+      
+      .header h1 {
+        font-size: 24px;
+        margin-bottom: 10px;
+      }
+      
+      .header p {
+        font-size: 14px;
+      }
+      
+      /* DURING MEETING: Hide everything except fullscreen */
+      body.meeting-active {
+        overflow: hidden;
+      }
+      
+      .meeting-active .header,
+      .meeting-active .meeting-container,
+      .meeting-active .status-panel,
+      .meeting-active .consultation-panel {
+        display: none !important;
+      }
+      
+      /* Full-Screen Video Container */
+      .mobile-fullscreen-call {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: #000;
+        z-index: 9999;
+        flex-direction: column;
+      }
+      
+      .meeting-active .mobile-fullscreen-call {
+        display: flex;
+      }
+      
+      /* Dave's Video (Full Screen) */
+      .mobile-main-video {
+        flex: 1;
+        width: 100%;
+        height: 100%;
+        position: relative;
+        background: #000;
+      }
+      
+      .mobile-main-video video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        /* Transform will be set dynamically by JavaScript */
+      }
+      
+      /* Picture-in-Picture (Your Camera) */
+      .mobile-pip-video {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        width: 120px;
+        height: 160px;
+        border-radius: 12px;
+        overflow: hidden;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+        z-index: 10;
+        background: #000;
+      }
+      
+      .mobile-pip-video video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transform: scaleX(-1); /* Default mirror for front camera */
+      }
+      
+      /* Call Controls Bar */
+      .mobile-call-controls {
+        position: absolute;
+        bottom: 8%; /* Move up significantly to prevent cutoff (was 30px) */
+        left: 0;
+        right: 0;
+        background: linear-gradient(to top, rgba(0,0,0,0.9), rgba(0,0,0,0.7), transparent);
+        padding: 30px 20px 20px;
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        gap: 15px;
+        min-height: 100px; /* Ensure buttons have space */
+      }
+      
+      .mobile-control-btn {
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        border: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        cursor: pointer;
+        transition: all 0.2s;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      }
+      
+      .mobile-control-btn:active {
+        transform: scale(0.95);
+      }
+      
+      .mobile-control-btn.camera {
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+      }
+      
+      .mobile-control-btn.microphone {
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+      }
+      
+      .mobile-control-btn.microphone.muted {
+        background: #dc3545;
+        color: white;
+      }
+      
+      .mobile-control-btn.end-call {
+        background: #dc3545;
+        color: white;
+        width: 64px;
+        height: 64px;
+      }
+      
+      .mobile-control-btn.switch-camera {
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+      }
+      
+      .mobile-control-btn.capture {
+        background: rgba(255, 255, 255, 0.3);
+        color: white;
+        border: 3px solid rgba(255, 255, 255, 0.5);
+      }
+      
+      .mobile-control-btn.capture:active {
+        background: #28a745;
+        animation: captureFlash 0.3s;
+      }
+      
+      @keyframes captureFlash {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; transform: scale(1.1); }
+      }
+      
+      /* Capture Flash Effect */
+      .capture-flash {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: white;
+        pointer-events: none;
+        opacity: 0;
+        z-index: 10000;
+        animation: flashEffect 0.3s;
+      }
+      
+      @keyframes flashEffect {
+        0% { opacity: 0; }
+        50% { opacity: 0.8; }
+        100% { opacity: 0; }
+      }
+      
+      /* Call Info Header */
+      .mobile-call-header {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        background: linear-gradient(to bottom, rgba(0,0,0,0.7), transparent);
+        padding: 20px;
+        color: white;
+        text-align: center;
+        z-index: 5;
+      }
+      
+      .mobile-call-header h2 {
+        font-size: 1.2em;
+        margin-bottom: 4px;
+        font-weight: 600;
+      }
+      
+      .mobile-call-header .call-status {
+        font-size: 0.9em;
+        opacity: 0.8;
+      }
+      
+      /* Hide mobile buttons that are now in the control bar */
+      .meeting-active #mobile-camera-switch-btn,
+      .meeting-active #mobile-focus-mode-btn,
+      .meeting-active #mobile-stop-btn,
+      .meeting-active #mobile-audio-btn {
+        display: none !important;
+      }
+      
+      /* Desktop view fallback for mobile */
       .meeting-container {
         grid-template-columns: 1fr;
         gap: 15px;
@@ -383,6 +643,45 @@
   </style>
 </head>
 <body>
+  <!-- Mobile Full-Screen Call Interface (Google Meet/WhatsApp Style) -->
+  <div class="mobile-fullscreen-call">
+    <!-- Call Header -->
+    <div class="mobile-call-header">
+      <h2>Dave - Moving Consultant</h2>
+      <div class="call-status">Connected</div>
+    </div>
+    
+    <!-- Main Video (Dave's Avatar - Full Screen) -->
+    <div class="mobile-main-video">
+      <!-- Dave's video will be moved here dynamically -->
+      <video id="mobile-persona-video" playsinline autoplay></video>
+      
+      <!-- Picture-in-Picture (Your Camera) -->
+      <div class="mobile-pip-video">
+        <video id="mobile-camera-video" playsinline autoplay muted></video>
+      </div>
+      
+      <!-- Control Bar -->
+      <div class="mobile-call-controls">
+        <button class="mobile-control-btn switch-camera" id="mobile-switch-camera-btn" title="Switch Camera">
+          🔄
+        </button>
+        <button class="mobile-control-btn capture" id="mobile-capture-btn" title="Capture Item">
+          📸
+        </button>
+        <button class="mobile-control-btn microphone" id="mobile-mute-btn" title="Mute/Unmute">
+          🎤
+        </button>
+        <button class="mobile-control-btn end-call" id="mobile-end-call-btn" title="End Call">
+          📞
+        </button>
+        <button class="mobile-control-btn camera" id="mobile-camera-btn" title="Camera">
+          📹
+        </button>
+      </div>
+    </div>
+  </div>
+  
   <div class="container">
     <!-- Header -->
     <div class="header">
