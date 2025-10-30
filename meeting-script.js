@@ -507,10 +507,11 @@ async function startMeeting() {
             console.log('✅ Mobile camera and microphone permissions granted');
             addLogMessage('success', '📱 Camera and microphone access granted');
             
-            // Add mobile interface elements
-            addMobileCameraSwitchButton();
-            addMobileFocusModeButton();
-            addMobileStopButton();
+            // COMMENTED OUT: Old mobile buttons - replaced by fullscreen control bar
+            // These legacy buttons are no longer needed with the new fullscreen interface
+            // addMobileCameraSwitchButton();
+            // addMobileFocusModeButton();
+            // addMobileStopButton();
         } else {
             // Desktop-specific audio constraints
             const devices = await navigator.mediaDevices.enumerateDevices();
@@ -1757,10 +1758,11 @@ async function initializeDaveAvatar() {
         // Add Elate Moving logo overlay to Dave's video
         addElateLogoOverlay();
         
-        // Add mobile audio enable button if on mobile
-        if (isMobile) {
-            addMobileAudioButton();
-        }
+        // COMMENTED OUT: Old mobile audio enable button
+        // Not needed - iOS audio unlock is now handled via touch on video element
+        // if (isMobile) {
+        //     addMobileAudioButton();
+        // }
             
             // Add message logging for debugging
             setupMessageLogging(anamClient);
@@ -2693,10 +2695,11 @@ async function processUserSpeech(transcript) {
                     console.log('📱 Mobile audio context handling:', audioError.message);
                 }
                 
-                // Add mobile audio enable button if not already present
-                if (!document.getElementById('mobile-audio-btn')) {
-                    addMobileAudioButton();
-                }
+                // COMMENTED OUT: Old mobile audio enable button
+                // Not needed with new fullscreen interface
+                // if (!document.getElementById('mobile-audio-btn')) {
+                //     addMobileAudioButton();
+                // }
             }
             
             daveAvatar.talk(fullResponse);
