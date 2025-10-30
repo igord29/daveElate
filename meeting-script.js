@@ -60,11 +60,29 @@ async function initializeSession() {
     currentSessionId = data.session_id;
     console.log('[SESSION] Session created:', currentSessionId);
     
-    // Auto-end session after 30 minutes as backup to server watchdog
+    // Warning at 5 minutes (1 minute remaining)
+    const warningTimeout = setTimeout(() => {
+        console.warn('[WARNING] 1 minute remaining in session');
+        addLogMessage('warning', '⏱️ 1 minute remaining - please wrap up');
+        
+        // Show alert on mobile
+        if (isMobile) {
+            // Don't use alert on mobile, just show prominent log message
+            addLogMessage('warning', '⏱️ Session will end in 60 seconds');
+        }
+    }, 5 * 60 * 1000); // 5 minutes
+    
+    // Auto-end session after 6 minutes (360 seconds)
     sessionTimeout = setTimeout(async () => {
-        console.warn('[TIMEOUT] Session exceeded 30 minutes - ending');
-        await endSession();
-    }, 30 * 60 * 1000);
+        console.warn('[TIMEOUT] Session exceeded 6 minutes - ending automatically');
+        addLogMessage('error', '⏱️ Session time limit reached (6 minutes) - ending call');
+        await stopMeeting(); // Use stopMeeting instead of just endSession for full cleanup
+    }, 6 * 60 * 1000); // 6 minutes in milliseconds
+    
+    // Store warning timeout for cleanup
+    window.sessionWarningTimeout = warningTimeout;
+    
+    console.log('[SESSION] Auto-timeout set for 6 minutes with 5-minute warning');
     
     return data;
   } catch (error) {
@@ -86,10 +104,15 @@ async function endSession() {
   try {
     console.log('[SESSION] Ending session:', currentSessionId);
     
-    // Clear the timeout
+    // Clear the timeouts
     if (sessionTimeout) {
       clearTimeout(sessionTimeout);
       sessionTimeout = null;
+    }
+    
+    if (window.sessionWarningTimeout) {
+      clearTimeout(window.sessionWarningTimeout);
+      window.sessionWarningTimeout = null;
     }
     
     await fetch('/api/end-session', {

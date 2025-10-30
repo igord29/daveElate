@@ -62,7 +62,7 @@ const activeSessions = new Map();
 let totalMinutesUsed = 0;
 const USAGE_WARNING_THRESHOLD = 60; // Alert at 60 minutes
 const USAGE_CRITICAL_THRESHOLD = 120; // Emergency shutdown at 120 minutes
-const SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes max session length
+const SESSION_TIMEOUT_MS = 6 * 60 * 1000; // 6 minutes max session length (360 seconds)
 
 // Graceful shutdown handler - CRITICAL for preventing runaway sessions
 const gracefulShutdown = async (reason = 'Server shutdown') => {
