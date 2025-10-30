@@ -23,6 +23,13 @@ window.daveAvatar = null;
 
 // Mobile detection (declare once, use everywhere)
 const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+const isAndroid = /Android/i.test(navigator.userAgent);
+
+// Expose globally for debugging
+window.isMobile = isMobile;
+window.isIOS = isIOS;
+window.isAndroid = isAndroid;
 
 // ============================================================================
 // SESSION CLEANUP - Enhanced session management
@@ -450,34 +457,51 @@ async function startMeeting() {
         
         // Get user media with mobile-specific constraints
         if (isMobile) {
-            console.log('📱 Mobile device detected - using mobile-optimized audio constraints');
+            console.log(`📱 Mobile device detected: ${isIOS ? 'iOS (iPhone/iPad)' : 'Android'}`);
             
             // Check if mediaDevices is available on mobile
             if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
                 addLogMessage('error', '📱 Mobile browser does not support camera/microphone access');
-                addLogMessage('info', '📱 Try using Chrome or Safari browser on mobile');
+                if (isIOS) {
+                    addLogMessage('info', '🍎 Try using Safari browser on iOS');
+                } else {
+                    addLogMessage('info', '📱 Try using Chrome browser on Android');
+                }
                 addLogMessage('info', '📱 Make sure you are using HTTPS or localhost');
                 updateStatus('error', 'Mobile browser not supported');
                 return;
             }
             
             // Mobile-specific constraints - Request both camera and microphone together
-            console.log('📱 Requesting camera and microphone permissions for mobile...');
-            addLogMessage('info', '📱 Requesting camera and microphone access...');
+            console.log(`📱 Requesting camera and microphone permissions for ${isIOS ? 'iOS' : 'Android'}...`);
+            addLogMessage('info', `${isIOS ? '🍎' : '📱'} Requesting camera and microphone access...`);
+            
+            // iOS-specific: More conservative constraints for better compatibility
+            const videoConstraints = isIOS ? {
+                width: { ideal: 1280 },
+                height: { ideal: 720 },
+                facingMode: 'user' // Start with front camera
+            } : {
+                width: { ideal: 1280, max: 1920 },
+                height: { ideal: 720, max: 1080 },
+                facingMode: 'user'
+            };
+            
+            const audioConstraints = isIOS ? {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true
+            } : {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true,
+                sampleRate: 44100,
+                channelCount: 1
+            };
             
             localStream = await navigator.mediaDevices.getUserMedia({
-                video: { 
-                    width: { ideal: 1280, max: 1920 }, 
-                    height: { ideal: 720, max: 1080 },
-                    facingMode: 'user' // Start with front camera for mobile
-                },
-                audio: {
-                    echoCancellation: true,
-                    noiseSuppression: true,
-                    autoGainControl: true, // Enable AGC for mobile
-                    sampleRate: 44100, // Standard mobile sample rate
-                    channelCount: 1
-                }
+                video: videoConstraints,
+                audio: audioConstraints
             });
             
             console.log('✅ Mobile camera and microphone permissions granted');
@@ -1672,11 +1696,18 @@ async function initializeDaveAvatar() {
             
             // Mobile-specific audio handling
             if (isMobile) {
-                console.log('📱 Mobile device - configuring audio for Dave\'s avatar');
+                console.log(`📱 Mobile device detected - ${isIOS ? 'iOS' : 'Android'}`);
                 
                 // CRITICAL: Ensure Dave's audio is not muted
                 personaVideo.muted = false;
                 personaVideo.volume = 1.0;
+                
+                // iOS-specific: Set playsinline to prevent fullscreen hijacking
+                if (isIOS) {
+                    personaVideo.setAttribute('playsinline', '');
+                    personaVideo.setAttribute('webkit-playsinline', '');
+                    console.log('🍎 iOS: Set playsinline attributes');
+                }
                 
                 // Add this: Force audio to play when it's ready
                 personaVideo.addEventListener('canplay', () => {
@@ -1686,7 +1717,11 @@ async function initializeDaveAvatar() {
                         addLogMessage('success', '🔊 Dave\'s audio is playing');
                     }).catch(e => {
                         console.log('❌ Dave audio blocked:', e);
-                        addLogMessage('warning', '📱 Tap Dave\'s video to enable audio');
+                        if (isIOS) {
+                            addLogMessage('warning', '🍎 Tap Dave\'s video to enable audio (iOS requirement)');
+                        } else {
+                            addLogMessage('warning', '📱 Tap Dave\'s video to enable audio');
+                        }
                     });
                 });
                 
@@ -1696,11 +1731,25 @@ async function initializeDaveAvatar() {
                     addLogMessage('success', '▶️ Dave\'s audio is active');
                 });
                 
+                // iOS-specific: Add tap handler for audio unlock
+                if (isIOS) {
+                    personaVideo.addEventListener('touchstart', function iosAudioUnlock() {
+                        personaVideo.play();
+                        console.log('🍎 iOS: User tapped video - audio unlocked');
+                        // Remove listener after first tap
+                        personaVideo.removeEventListener('touchstart', iosAudioUnlock);
+                    }, { once: true });
+                }
+                
                 // Ensure your own video preview is muted (to prevent echo)
                 const cameraVideo = document.getElementById('cameraVideo');
                 if (cameraVideo) {
                     cameraVideo.muted = true;  // ✅ Prevent hearing yourself
                     cameraVideo.volume = 0;
+                    if (isIOS) {
+                        cameraVideo.setAttribute('playsinline', '');
+                        cameraVideo.setAttribute('webkit-playsinline', '');
+                    }
                     console.log('🔇 Your camera video muted to prevent echo');
                 }
             }
@@ -2281,14 +2330,37 @@ async function captureAndAnalyzeVision() {
             if (currentFacingMode === 'environment') {
                 // Back camera is fullscreen in mobile-persona-video
                 video = document.getElementById('mobile-persona-video');
+                console.log(`👁️ ${isIOS ? '🍎 iOS' : '📱 Android'}: Capturing from BACK camera (environment) in mobile-persona-video`);
             } else {
                 // Front camera is in mobile-camera-video (PiP)
                 video = document.getElementById('mobile-camera-video');
+                console.log(`👁️ ${isIOS ? '🍎 iOS' : '📱 Android'}: Capturing from FRONT camera (user) in mobile-camera-video`);
             }
-            console.log(`👁️ Mobile mode: Capturing from ${currentFacingMode} camera`);
         } else {
             // Desktop or mobile landing page - use regular cameraVideo
             video = document.getElementById('cameraVideo');
+            console.log('👁️ Desktop/Landing: Capturing from cameraVideo');
+        }
+        
+        // CRITICAL iOS CHECK: Verify video element has correct stream
+        if (isIOS && video && video.srcObject) {
+            const videoTracks = video.srcObject.getVideoTracks();
+            if (videoTracks.length > 0) {
+                const track = videoTracks[0];
+                const settings = track.getSettings();
+                console.log(`🍎 iOS Video Check: ${video.id} has ${settings.facingMode || 'unknown'} camera (${settings.width}x${settings.height})`);
+                
+                // Verify it matches what we expect
+                if (currentFacingMode === 'environment' && settings.facingMode !== 'environment') {
+                    console.error(`❌ iOS BUG: Expected 'environment' camera but got '${settings.facingMode}'!`);
+                    addLogMessage('error', '❌ iOS: Back camera not active in video element');
+                } else if (currentFacingMode === 'user' && settings.facingMode !== 'user') {
+                    console.error(`❌ iOS BUG: Expected 'user' camera but got '${settings.facingMode}'!`);
+                    addLogMessage('error', '❌ iOS: Front camera not active in video element');
+                }
+            } else {
+                console.error(`❌ iOS: Video element ${video.id} has no video tracks!`);
+            }
         }
         
         if (!video || !video.videoWidth || !video.videoHeight) {
@@ -3024,21 +3096,42 @@ function setupMobileControls() {
             
             if (currentFacingMode === 'environment') {
                 // Back camera = Show YOUR camera fullscreen, Dave in PiP
-                console.log('📱 Back camera active - Swapping: Your camera → Fullscreen, Dave → PiP');
+                console.log(`📱 Back camera active - Swapping: Your camera → Fullscreen, Dave → PiP (${isIOS ? 'iOS' : 'Android'})`);
                 
                 if (mobilePersonaVideo && localStream) {
+                    // Set the localStream (which now has back camera video) to fullscreen
                     mobilePersonaVideo.srcObject = localStream;
                     mobilePersonaVideo.muted = true; // Mute self-view
                     mobilePersonaVideo.style.transform = 'scaleX(1)'; // Normal orientation for back camera
+                    
+                    // iOS: Force video to play and ensure attributes
+                    if (isIOS) {
+                        mobilePersonaVideo.setAttribute('playsinline', '');
+                        mobilePersonaVideo.setAttribute('webkit-playsinline', '');
+                        mobilePersonaVideo.play().catch(e => console.log('🍎 iOS mobile-persona-video play:', e));
+                        console.log('🍎 iOS: Set back camera to mobile-persona-video (fullscreen)');
+                    }
+                    
+                    // Verify the stream
+                    const videoTracks = localStream.getVideoTracks();
+                    if (videoTracks.length > 0) {
+                        const settings = videoTracks[0].getSettings();
+                        console.log(`✅ mobile-persona-video now showing: ${settings.facingMode} camera (${settings.width}x${settings.height})`);
+                    }
                 }
                 
                 if (mobileCameraVideo && personaVideo?.srcObject) {
                     mobileCameraVideo.srcObject = personaVideo.srcObject;
                     mobileCameraVideo.muted = false; // Dave's audio
                     mobileCameraVideo.volume = 1.0;
+                    
+                    if (isIOS) {
+                        mobileCameraVideo.play().catch(e => console.log('🍎 iOS mobile-camera-video play:', e));
+                        console.log('🍎 iOS: Set Dave to mobile-camera-video (PiP)');
+                    }
                 }
                 
-                addLogMessage('success', '📱 Back camera → Showing your place fullscreen');
+                addLogMessage('success', `📱 Back camera → Showing your place fullscreen ${isIOS ? '🍎' : ''}`);
                 
             } else {
                 // Front camera = Show DAVE fullscreen, your camera in PiP

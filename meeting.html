@@ -462,6 +462,15 @@
         min-height: 100px; /* Ensure buttons have space */
       }
       
+      /* iOS-specific: Raise buttons even higher (13% from bottom) */
+      @supports (-webkit-touch-callout: none) {
+        /* This targets iOS Safari specifically */
+        .mobile-call-controls {
+          bottom: 13% !important; /* 5% higher than Android */
+          padding-bottom: max(20px, env(safe-area-inset-bottom)) !important;
+        }
+      }
+      
       .mobile-control-btn {
         width: 56px;
         height: 56px;
