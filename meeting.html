@@ -649,6 +649,66 @@
     .hidden-input {
       display: none;
     }
+    
+    /* Trust Badges */
+    .trust-badges {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 5px;
+      margin-top: 20px;
+      margin-bottom: 20px;
+      padding: 0 20px;
+    }
+    
+    .trust-badge {
+      display: inline-block;
+      padding: 4px 8px;
+      margin: 2px 3px;
+      background: transparent;
+      color: white;
+      border: none;
+      border-radius: 0;
+      font-size: 0.85em;
+      font-weight: 600;
+      text-transform: none;
+      letter-spacing: 0;
+      white-space: nowrap;
+      box-shadow: none;
+      cursor: default;
+      line-height: 1.5;
+      text-shadow: 
+        -1px -1px 0 #000,
+         1px -1px 0 #000,
+        -1px  1px 0 #000,
+         1px  1px 0 #000,
+        -2px  0   0 #000,
+         2px  0   0 #000,
+         0   -2px 0 #000,
+         0    2px 0 #000;
+    }
+    
+    .trust-badge:hover {
+      background: transparent;
+      color: white;
+    }
+    
+    /* Mobile: Stack trust badges vertically */
+    @media (max-width: 768px) {
+      .trust-badges {
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+      }
+      
+      .trust-badge {
+        width: 100%;
+        max-width: 280px;
+        justify-content: center;
+        font-size: 0.9em;
+        padding: 8px 16px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -695,7 +755,7 @@
     <!-- Header -->
     <div class="header">
       <h1>🏠 Dave's Moving Consultant</h1>
-      <p>Professional AI-powered moving consultation with real-time vision analysis</p>
+      <p>Get an instant moving quote with AI-powered video consultation</p>
     </div>
 
     <!-- Main Meeting Interface -->
@@ -718,7 +778,10 @@
 
       <!-- Controls Panel -->
       <div class="controls-panel">
-        <h3>🎯 Meeting Controls</h3>
+        <h3 style="text-align: center; color: #001f3f; margin-bottom: 15px;">👋 Welcome! Let's get your moving quote</h3>
+        <p style="text-align: center; color: #666; margin-bottom: 25px; font-size: 0.95em;">
+          Click below to start a quick video consultation with Dave, your AI moving consultant
+        </p>
         
         <div class="control-grid">
           <button id="start-meeting" class="btn btn-large">
@@ -726,7 +789,8 @@
           </button>
         </div>
         
-        <div class="control-grid">
+        <!-- HIDDEN: Non-customer-facing buttons - kept for development/testing -->
+        <div class="control-grid" style="display: none;">
           <button id="allow-video" class="btn btn-info" disabled>
             📹 Allow Video
           </button>
@@ -735,7 +799,7 @@
           </button>
         </div>
         
-        <div class="control-grid">
+        <div class="control-grid" style="display: none;">
           <button id="noise-suppression" class="btn btn-success" disabled>
             🎤 Noise Suppression: ON
           </button>
@@ -744,7 +808,7 @@
           </button>
         </div>
         
-        <div class="control-grid">
+        <div class="control-grid" style="display: none;">
           <button id="capture-items" class="btn btn-success" disabled>
             📸 Capture Items
           </button>
@@ -753,7 +817,7 @@
           </button>
         </div>
         
-        <div class="control-grid">
+        <div class="control-grid" style="display: none;">
           <button id="dave-greeting" class="btn btn-info" disabled>
             👋 Dave's Greeting
           </button>
@@ -762,7 +826,7 @@
           </button>
         </div>
         
-        <div class="control-grid">
+        <div class="control-grid" style="display: none;">
           <button id="stop-meeting" class="btn btn-danger" disabled>
             ⏹️ Stop Meeting
           </button>
@@ -771,11 +835,26 @@
           </button>
         </div>
         
-        <div class="control-grid">
+        <div class="control-grid" style="display: none;">
           <button id="debug-anam-audio" class="btn btn-warning">
             🔍 Debug Dave Audio
           </button>
         </div>
+      </div>
+    </div>
+    
+    <!-- Trust Badges (Outside white panel, in main area) -->
+    <div style="text-align: center; margin-top: 30px; margin-bottom: 30px;">
+      <div style="margin-bottom: 10px;">
+        <span class="trust-badge">✅ BBB Accredited</span>
+        <span class="trust-badge">✅ PMA Member</span>
+      </div>
+      <div style="margin-bottom: 10px;">
+        <span class="trust-badge">🔒 Secure Video</span>
+        <span class="trust-badge">💳 No Card Required</span>
+      </div>
+      <div>
+        <span class="trust-badge">💯 Instant Free Quote</span>
       </div>
     </div>
 
